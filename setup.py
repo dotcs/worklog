@@ -12,6 +12,7 @@ setuptools.setup(
     author="Fabian Mueller",
     author_email="repository@dotcs.me",
     description="Simple CLI tool to log work and projects",
+    license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
