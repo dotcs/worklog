@@ -1,0 +1,3 @@
+include worklog/config.cfg
+include LICENSE
+include requirements.txt
