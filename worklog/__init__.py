@@ -104,6 +104,13 @@ class Log(object):
         sub_df = self._log_df[self._log_df.date == query_date]
         sub_df = sub_df[["datetime", "type"]]
 
+        if sub_df.shape[0] == 0:
+            if fmt is None:
+                sys.stdout.write("No data available\n")
+            else:
+                sys.stdout.write("N/A")
+            return
+
         is_curr_working = (
             sub_df.iloc[-1]["type"] == "start" if sub_df.shape[0] > 0 else False
         )
@@ -216,10 +223,13 @@ class Log(object):
 
 
 def _format_timedelta(td):
-    total_secs = td.total_seconds()
-    hours, remainder = divmod(total_secs, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
+    try:
+        total_secs = td.total_seconds()
+        hours, remainder = divmod(total_secs, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
+    except ValueError:
+        return "{:02}:{:02}:{:02}".format(0, 0, 0)
 
 
 def dispatch(cfg, cli_args):
