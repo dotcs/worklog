@@ -1,17 +1,19 @@
+from typing import List
 import logging
 import sys
 import argparse
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, tzinfo
 
-LOG_FORMAT = logging.BASIC_FORMAT
-LOG_LEVELS = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
+LOG_FORMAT: str = logging.BASIC_FORMAT
+LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
 
-CONFIG_FILES = [
+CONFIG_FILES: List[str] = [
     os.path.expanduser("~/.config/worklog/config"),
     os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.cfg"),
 ]
-LOCAL_TIMEZONE = datetime.now(timezone.utc).astimezone().tzinfo
+
+LOCAL_TIMEZONE: tzinfo = datetime.now(timezone.utc).astimezone().tzinfo
 
 
 def get_logger() -> logging.Logger:
