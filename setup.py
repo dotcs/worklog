@@ -7,7 +7,7 @@ with open("requirements.txt", "r") as fh:
     requirements = fh.read()
 
 setuptools.setup(
-    name="dcs-worklog",  # Replace with your own username
+    name="dcs-worklog",
     version="0.0.2",
     author="Fabian Mueller",
     author_email="repository@dotcs.me",
