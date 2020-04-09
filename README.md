@@ -80,7 +80,7 @@ hours_max = 10
 tbd
 
 ```bash
-wl status --fmt '{status} | {remaining_time} (percentage}'
+wl status --fmt '{status} | {remaining_time} (percentage}%'
 ```
 
 ### Sanity check
