@@ -1,15 +1,28 @@
-```
-wl clock in
-wl clock out
-wl clock undo
+```bash
+wl commit start
+wl commit start --offset-minutes -5
+wl commit stop
+wl commit stop --offset-minutes +5
+# wl commit undo
+
+wl doctor
+
+# wl task create <NAME>
+# wl task list
+# wl task delete <NAME>
+# wl commit start --task <taskID>
+
+wl log
 
 wl status
-wl status today
-wl status today --no-auto-break
+wl status --fmt "{percentage}"
 
-wl report
-wl report 2020-04
-wl report 2020-04-08
+wl report --today
+wl report --yesterday
+wl report --current-month
+wl report --last-month
+wl report --month 2020-04
+wl report --date 2020-04-08
 
 wl config get working_time.daily_hours
 wl config set working_time.daily_hours 8
