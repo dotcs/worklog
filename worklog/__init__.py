@@ -142,17 +142,34 @@ class Log(object):
         now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
         end_time = now + (hours_target_dt - total_time)
         end_time_str = end_time.strftime("%H:%M:%S")
-        remaining_time_str = _format_timedelta(end_time - now)
+        remaining_time = max(end_time - now, timedelta(minutes=0))
+        remaining_time_str = _format_timedelta(remaining_time)
+        overtime = max(total_time - hours_target_dt, timedelta(minutes=0))
+        overtime_str = _format_timedelta(overtime)
 
         percentage = round(
             total_time.total_seconds() / hours_target_dt.total_seconds() * 100
         )
+        percentage_remaining = max(0, 100 - percentage)
+        percentage_overtime = max(
+            round(
+                overtime.total_seconds()
+                / (hours_max_dt - hours_target_dt).total_seconds()
+                * 100
+            ),
+            0,
+        )
 
         lines = [
             ("Status", "Tracking on" if is_curr_working else "Tracking off"),
-            ("Total time today", f"{total_time_str} ({percentage}%)"),
-            ("Remaining time today", f"{remaining_time_str} ({100 - percentage}%)"),
+            ("Total time", "{} ({:3}%)".format(total_time_str, percentage)),
+            (
+                "Remaining time",
+                "{} ({:3}%)".format(remaining_time_str, percentage_remaining),
+            ),
+            ("Overtime", "{} ({:3}%)".format(overtime_str, percentage_overtime),),
         ]
+
         if is_curr_working and date == "today":
             lines += [("End of work", end_time_str,)]
 
@@ -171,6 +188,9 @@ class Log(object):
                     end_of_work=end_time_str,
                     total_time=total_time_str,
                     remaining_time=remaining_time_str,
+                    percentage_remaining=percentage_remaining,
+                    overtime=overtime_str,
+                    percentage_overtime=percentage_overtime,
                 )
             )
 
