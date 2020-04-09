@@ -1,15 +1,16 @@
-import configparser
 import os
+from configparser import ConfigParser
+from argparse import Namespace
 
 from worklog.utils import get_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
 from worklog.log import Log
 
 
-def dispatch(cfg, cli_args):
-    worklog_fp = os.path.expanduser(cfg.get("worklog", "path"))
-
-    log = Log(worklog_fp)
-
+def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
+    """
+    Dispatch request to Log instance based on CLI arguments and
+    configuration values.
+    """
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
             log.commit(cli_args.type, cli_args.offset_minutes)
@@ -35,7 +36,7 @@ def dispatch(cfg, cli_args):
         log.log(cli_args.number, use_pager)
 
 
-def run():
+def run() -> None:
     logger = get_logger()
     parser = get_arg_parser()
 
@@ -45,10 +46,13 @@ def run():
     logger.debug(f"Parsed CLI arguments: {cli_args}")
     logger.debug(f"Path to config files: {CONFIG_FILES}")
 
-    cfg = configparser.ConfigParser()
+    cfg = ConfigParser()
     cfg.read(CONFIG_FILES)
 
-    dispatch(cfg, cli_args)
+    worklog_fp = os.path.expanduser(cfg.get("worklog", "path"))
+    log = Log(worklog_fp)
+
+    dispatch(log, cli_args, cfg)
 
 
 if __name__ == "__main__":

@@ -16,20 +16,20 @@ class Log(object):
     _log_df = None
     _separator = None
 
-    def __init__(self, fp, separator="|"):
+    def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
         self._separator = separator
 
         self._create_file_if_not_exists()
         self._read()
 
-    def _create_file_if_not_exists(self):
+    def _create_file_if_not_exists(self) -> None:
         if not os.path.exists(self._log_fp):
             # create empty file if it does not exist
             with open(self._log_fp, "w") as fh:
                 fh.write("")
 
-    def _read(self):
+    def _read(self) -> None:
         try:
             self._log_df = pd.read_csv(
                 self._log_fp, sep=self._separator, parse_dates=["datetime"]
@@ -40,13 +40,13 @@ class Log(object):
         self._log_df["date"] = self._log_df["datetime"].apply(lambda x: x.date)
         self._log_df["time"] = self._log_df["datetime"].apply(lambda x: x.time)
 
-    def _persist(self, df, reload=False):
+    def _persist(self, df: pd.DataFrame, reload: bool = False) -> None:
         persisted_fields = ["datetime", "category", "type"]
         df[persisted_fields].to_csv(self._log_fp, sep=self._separator, index=False)
         if reload:
             self._read()
 
-    def commit(self, type_, offset_min):
+    def commit(self, type_: str, offset_min: int) -> None:
         if type_ not in ["start", "stop"]:
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
@@ -64,7 +64,7 @@ class Log(object):
         df = pd.concat((self._log_df, new_entry))
         self._persist(df, reload=True)
 
-    def doctor(self):
+    def doctor(self) -> None:
         def test_alternating_start_stop(group):
             last_type = None
             for i, row in group.where(group["category"] == "start_stop").iterrows():
@@ -82,7 +82,9 @@ class Log(object):
 
         self._log_df.groupby("date").apply(test_alternating_start_stop)
 
-    def status(self, hours_target, hours_max, date="today", fmt=None):
+    def status(
+        self, hours_target: int, hours_max: int, date: str = "today", fmt: str = None
+    ) -> None:
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
             return
@@ -193,7 +195,7 @@ class Log(object):
                 )
             )
 
-    def log(self, n, use_pager):
+    def log(self, n: int, use_pager: bool) -> None:
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
             return

@@ -2,7 +2,7 @@ import logging
 import sys
 import argparse
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 LOG_FORMAT = logging.BASIC_FORMAT
 LOG_LEVELS = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -14,7 +14,7 @@ CONFIG_FILES = [
 LOCAL_TIMEZONE = datetime.now(timezone.utc).astimezone().tzinfo
 
 
-def get_logger():
+def get_logger() -> logging.Logger:
     logger = logging.getLogger("worklog")
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(LOG_FORMAT)
@@ -24,7 +24,7 @@ def get_logger():
     return logger
 
 
-def _format_timedelta(td):
+def _format_timedelta(td: timedelta) -> str:
     try:
         total_secs = td.total_seconds()
         hours, remainder = divmod(total_secs, 3600)
@@ -34,14 +34,14 @@ def _format_timedelta(td):
         return "{:02}:{:02}:{:02}".format(0, 0, 0)
 
 
-def _positive_int(value):
+def _positive_int(value: str) -> int:
     value_int = int(value)
     if value_int <= 0:
         raise argparse.ArgumentTypeError(f"{value} is not a positive int value.")
     return value_int
 
 
-def get_arg_parser():
+def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser("WorkLog")
     parser.add_argument("-v", "--verbose", dest="verbosity", action="count", default=0)
 
