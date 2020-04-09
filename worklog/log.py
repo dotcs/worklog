@@ -6,7 +6,7 @@ import pandas as pd
 import subprocess
 import tempfile
 
-from worklog.utils import get_logger, LOCAL_TIMEZONE, _format_timedelta
+from worklog.utils import get_logger, LOCAL_TIMEZONE, format_timedelta
 
 logger = logging.getLogger("worklog")
 
@@ -133,7 +133,7 @@ class Log(object):
         sub_df["datetime_shift"] = sub_df["datetime"].shift(1)
         x = sub_df[sub_df["type"] == "stop"]
         total_time = (x["datetime"] - x["datetime_shift"]).sum()
-        total_time_str = _format_timedelta(total_time)
+        total_time_str = format_timedelta(total_time)
 
         hours_target_dt = timedelta(hours=hours_target)
         hours_max_dt = timedelta(hours=hours_max)
@@ -142,9 +142,9 @@ class Log(object):
         end_time = now + (hours_target_dt - total_time)
         end_time_str = end_time.strftime("%H:%M:%S")
         remaining_time = max(end_time - now, timedelta(minutes=0))
-        remaining_time_str = _format_timedelta(remaining_time)
+        remaining_time_str = format_timedelta(remaining_time)
         overtime = max(total_time - hours_target_dt, timedelta(minutes=0))
-        overtime_str = _format_timedelta(overtime)
+        overtime_str = format_timedelta(overtime)
 
         percentage = round(
             total_time.total_seconds() / hours_target_dt.total_seconds() * 100

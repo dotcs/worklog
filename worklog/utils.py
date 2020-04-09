@@ -26,7 +26,7 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-def _format_timedelta(td: timedelta) -> str:
+def format_timedelta(td: timedelta) -> str:
     try:
         total_secs = td.total_seconds()
         hours, remainder = divmod(total_secs, 3600)
