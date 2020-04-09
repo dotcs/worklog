@@ -44,7 +44,9 @@ def _positive_int(value: str) -> int:
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser("WorkLog")
+    parser = argparse.ArgumentParser(
+        "Worklog", description="Simple CLI tool to log work and projects."
+    )
     parser.add_argument("-v", "--verbose", dest="verbosity", action="count", default=0)
 
     subparsers = parser.add_subparsers(dest="subcmd")

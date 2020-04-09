@@ -47,6 +47,10 @@ def run() -> None:
     logger.debug(f"Parsed CLI arguments: {cli_args}")
     logger.debug(f"Path to config files: {CONFIG_FILES}")
 
+    if cli_args.subcmd is None:
+        parser.print_help()
+        return
+
     cfg = ConfigParser()
     cfg.read(CONFIG_FILES)
 
