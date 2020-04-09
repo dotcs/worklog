@@ -37,6 +37,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
 
 
 def run() -> None:
+    """ Main method """
     logger = get_logger()
     parser = get_arg_parser()
 
