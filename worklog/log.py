@@ -86,7 +86,12 @@ class Log(object):
         self, hours_target: int, hours_max: int, date: str = "today", fmt: str = None
     ) -> None:
         if self._log_df.shape[0] == 0:
-            sys.stdout.write("No data available\n")
+            if fmt is None:
+                sys.stderr.write(
+                    "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
+                )
+            else:
+                sys.stdout.write("N/A")
             return
 
         query_date = datetime.now().date()
@@ -98,7 +103,7 @@ class Log(object):
 
         if sub_df.shape[0] == 0:
             if fmt is None:
-                sys.stdout.write("No data available\n")
+                sys.stderr.write(f"No log data available for {query_date}.\n")
             else:
                 sys.stdout.write("N/A")
             return
