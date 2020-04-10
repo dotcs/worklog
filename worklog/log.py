@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 import tempfile
+from pathlib import Path
 
 from worklog.utils import LOCAL_TIMEZONE, format_timedelta
 
@@ -21,14 +22,8 @@ class Log(object):
         self._log_fp = fp
         self._separator = separator
 
-        self._create_file_if_not_exists()
+        Path(self._log_fp).touch(mode=0o660)
         self._read()
-
-    def _create_file_if_not_exists(self) -> None:
-        if not os.path.exists(self._log_fp):
-            # create empty file if it does not exist
-            with open(self._log_fp, "w") as fh:
-                fh.write("")
 
     def _read(self) -> None:
         try:
