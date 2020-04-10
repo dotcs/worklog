@@ -1,3 +1,4 @@
+from typing import List, Tuple
 from datetime import datetime, timedelta, timezone
 import logging
 import os
@@ -8,15 +9,25 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from worklog.utils import LOCAL_TIMEZONE, format_timedelta
+from worklog.utils import (
+    LOCAL_TIMEZONE,
+    format_timedelta,
+    empty_df_from_schema,
+    get_datetime_cols_from_schema,
+)
 
 logger = logging.getLogger("worklog")
 
 
 class Log(object):
-    _log_fp = None
-    _log_df = None
-    _separator = None
+    _log_fp: str = None
+    _log_df: pd.DataFrame = None
+    _separator: str = None
+    _schema: List[Tuple[str, str]] = [
+        ("datetime", "datetime64[ns]",),
+        ("category", "object",),
+        ("type", "object",),
+    ]
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -26,24 +37,19 @@ class Log(object):
         self._read()
 
     def _read(self) -> None:
+        date_cols = get_datetime_cols_from_schema(self._schema)
         try:
             self._log_df = pd.read_csv(
-                self._log_fp, sep=self._separator, parse_dates=["datetime"]
+                self._log_fp, sep=self._separator, parse_dates=date_cols
             )
         except pd.errors.EmptyDataError:
-            self._log_df = pd.DataFrame(
-                {
-                    "datetime": pd.Series(dtype="datetime64[ns]"),
-                    "category": pd.Series(dtype="object"),
-                    "type": pd.Series(dtype="object"),
-                }
-            )
+            self._log_df = empty_df_from_schema(self._schema)
 
         self._log_df["date"] = self._log_df["datetime"].apply(lambda x: x.date)
         self._log_df["time"] = self._log_df["datetime"].apply(lambda x: x.time)
 
     def _persist(self, df: pd.DataFrame, reload: bool = False) -> None:
-        persisted_fields = ["datetime", "category", "type"]
+        persisted_fields = [key for key, _ in self._schema]
         df[persisted_fields].to_csv(self._log_fp, sep=self._separator, index=False)
         if reload:
             self._read()

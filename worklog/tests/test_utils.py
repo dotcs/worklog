@@ -3,8 +3,16 @@ from unittest.mock import patch
 from io import StringIO
 from datetime import timedelta
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
+from pandas import DataFrame, Series
+import numpy as np
 
-from worklog.utils import format_timedelta, get_arg_parser, _positive_int
+from worklog.utils import (
+    format_timedelta,
+    get_arg_parser,
+    _positive_int,
+    empty_df_from_schema,
+    get_datetime_cols_from_schema,
+)
 
 
 class TestUtils(unittest.TestCase):
@@ -22,6 +30,30 @@ class TestUtils(unittest.TestCase):
     def test_positive_int_with_neg_int(self):
         with self.assertRaises(ArgumentTypeError):
             _positive_int("-5")
+
+    def test_empty_df_from_schema(self):
+        schema = [
+            ("datetime", "datetime64[ns]",),
+            ("category", "object",),
+            ("type", "object",),
+        ]
+
+        df = empty_df_from_schema(schema)
+        self.assertListEqual(
+            df.dtypes.values.tolist(),
+            [np.dtype("<M8[ns]"), np.dtype("O"), np.dtype("O")],
+        )
+        self.assertTupleEqual(df.shape, (0, 3))
+
+    def test_get_datetime_cols_from_schema(self):
+        schema = [
+            ("datetime", "datetime64[ns]",),
+            ("category", "object",),
+            ("type", "object",),
+        ]
+
+        actual = get_datetime_cols_from_schema(schema)
+        self.assertListEqual(["datetime"], actual)
 
 
 class TestArgumentParser(unittest.TestCase):
