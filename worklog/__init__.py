@@ -33,7 +33,10 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     elif cli_args.subcmd == "log":
         n = cli_args.number
         use_pager = cli_args.all or n > 20
-        log.log(cli_args.number, use_pager)
+        if not cli_args.all:
+            log.log(cli_args.number, use_pager)
+        else:
+            log.log(-1, use_pager)
 
 
 def run() -> None:
