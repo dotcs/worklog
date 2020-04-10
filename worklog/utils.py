@@ -16,7 +16,7 @@ CONFIG_FILES: List[str] = [
 LOCAL_TIMEZONE: tzinfo = datetime.now(timezone.utc).astimezone().tzinfo
 
 
-def get_logger() -> logging.Logger:
+def configure_logger() -> logging.Logger:
     logger = logging.getLogger("worklog")
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(LOG_FORMAT)

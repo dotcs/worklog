@@ -2,7 +2,7 @@ import os
 from configparser import ConfigParser
 from argparse import Namespace
 
-from worklog.utils import get_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
+from worklog.utils import configure_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
 from worklog.log import Log
 
 
@@ -38,7 +38,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
 
 def run() -> None:
     """ Main method """
-    logger = get_logger()
+    logger = configure_logger()
     parser = get_arg_parser()
 
     cli_args = parser.parse_args()

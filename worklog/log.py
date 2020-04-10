@@ -3,10 +3,11 @@ import logging
 import os
 import sys
 import pandas as pd
+import numpy as np
 import subprocess
 import tempfile
 
-from worklog.utils import get_logger, LOCAL_TIMEZONE, format_timedelta
+from worklog.utils import LOCAL_TIMEZONE, format_timedelta
 
 logger = logging.getLogger("worklog")
 
@@ -35,7 +36,13 @@ class Log(object):
                 self._log_fp, sep=self._separator, parse_dates=["datetime"]
             )
         except pd.errors.EmptyDataError:
-            self._log_df = pd.DataFrame([], columns=["datetime", "category", "type"],)
+            self._log_df = pd.DataFrame(
+                {
+                    "datetime": pd.Series(dtype="datetime64[ns]"),
+                    "category": pd.Series(dtype="object"),
+                    "type": pd.Series(dtype="object"),
+                }
+            )
 
         self._log_df["date"] = self._log_df["datetime"].apply(lambda x: x.date)
         self._log_df["time"] = self._log_df["datetime"].apply(lambda x: x.time)
