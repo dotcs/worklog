@@ -50,7 +50,9 @@ class Log(object):
 
     def _persist(self, df: pd.DataFrame, reload: bool = False) -> None:
         persisted_fields = [key for key, _ in self._schema]
-        df[persisted_fields].to_csv(self._log_fp, sep=self._separator, index=False)
+        df[persisted_fields].sort_values(by=["datetime"], ascending=True).to_csv(
+            self._log_fp, sep=self._separator, index=False
+        )
         if reload:
             self._read()
 
