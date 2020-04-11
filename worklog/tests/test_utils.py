@@ -1,12 +1,13 @@
+from typing import Optional
 import unittest
 import logging
 from unittest.mock import patch
 from io import StringIO
 from datetime import timedelta
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
-from pandas import DataFrame, Series
+from pandas import DataFrame, Series  # type: ignore
 from datetime import datetime, date, timezone
-import numpy as np
+import numpy as np  # type: ignore
 
 from worklog.utils import (
     format_timedelta,
@@ -150,8 +151,6 @@ class TestUtils(unittest.TestCase):
 
 
 class TestArgumentParser(unittest.TestCase):
-    parser: ArgumentParser = None
-
     def setUp(self):
         self.parser = get_arg_parser()
 

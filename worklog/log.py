@@ -1,10 +1,10 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from datetime import datetime, date, timedelta, timezone
 import logging
 import os
 import sys
-import pandas as pd
-import numpy as np
+import pandas as pd  # type: ignore
+import numpy as np  # type: ignore
 import subprocess
 import tempfile
 from pathlib import Path
@@ -27,8 +27,8 @@ class Log(object):
     _log_df: pd.DataFrame = None
 
     # Backend file config
-    _log_fp: str = None
-    _separator: str = None
+    _log_fp: Optional[str] = None
+    _separator: Optional[str] = None
     _schema: List[Tuple[str, str]] = [
         ("datetime", "datetime64[ns]",),
         ("category", "object",),
@@ -104,7 +104,7 @@ class Log(object):
         return df.iloc[-1]["type"] == "start" if df.shape[0] > 0 else False
 
     def status(
-        self, hours_target: int, hours_max: int, query_date: date, fmt: str = None
+        self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
     ) -> None:
         if self._log_df.shape[0] == 0:
             if fmt is None:

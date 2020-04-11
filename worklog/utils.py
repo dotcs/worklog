@@ -1,5 +1,5 @@
-from typing import List, Iterable, Tuple
-from pandas import DataFrame, Series
+from typing import List, Iterable, Tuple, Dict, Optional
+from pandas import DataFrame, Series  # type: ignore
 import logging
 import sys
 import argparse
@@ -15,7 +15,7 @@ CONFIG_FILES: List[str] = [
     os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.cfg"),
 ]
 
-LOCAL_TIMEZONE: tzinfo = datetime.now(timezone.utc).astimezone().tzinfo
+LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinfo
 
 
 def configure_logger() -> logging.Logger:
@@ -97,7 +97,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
 
 def empty_df_from_schema(schema: Iterable[Tuple[str, str]]) -> DataFrame:
-    def reducer(acc: object, x: Tuple[str, str]):
+    def reducer(acc: Dict, x: Tuple[str, str]):
         acc[x[0]] = Series(dtype=x[1])
         return acc
 
@@ -129,7 +129,9 @@ def check_order_start_stop(df_group: DataFrame, logger: logging.Logger):
         logger.error(f"Date {row.date} has no stop entry.")
 
 
-def sentinel_datetime(target_date: date, tzinfo=LOCAL_TIMEZONE) -> datetime:
+def sentinel_datetime(
+    target_date: date, tzinfo: Optional[tzinfo] = LOCAL_TIMEZONE
+) -> datetime:
     if target_date > datetime.now().date():
         raise ValueError("Only dates on the same day or in the past are supported.")
     return min(
