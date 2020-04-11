@@ -1,9 +1,11 @@
 import unittest
+import logging
 from unittest.mock import patch
 from io import StringIO
 from datetime import timedelta
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
 from pandas import DataFrame, Series
+from datetime import datetime, timezone
 import numpy as np
 
 from worklog.utils import (
@@ -12,6 +14,7 @@ from worklog.utils import (
     _positive_int,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
+    check_order_start_stop,
 )
 
 
@@ -54,6 +57,70 @@ class TestUtils(unittest.TestCase):
 
         actual = get_datetime_cols_from_schema(schema)
         self.assertListEqual(["datetime"], actual)
+
+    def test_check_order_start_stop(self):
+        schema = [
+            ("datetime", "datetime64[ns]",),
+            ("category", "object",),
+            ("type", "object",),
+        ]
+
+        rows = [
+            {
+                "datetime": datetime(2020, 1, 1, 0, 0, 0, 0, timezone.utc),
+                "category": "start_stop",
+                "type": "start",
+            },
+            {
+                "datetime": datetime(2020, 1, 1, 1, 0, 0, 0, timezone.utc),
+                "category": "start_stop",
+                "type": "stop",
+            },
+            {
+                "datetime": datetime(2020, 1, 1, 2, 0, 0, 0, timezone.utc),
+                "category": "start_stop",
+                "type": "stop",
+            },
+        ]
+
+        logger = logging.getLogger("test_check_order_start_stop")
+        df = empty_df_from_schema(schema)
+
+        # Positive case
+        df1 = df.append(rows[:2], ignore_index=True)
+        df1["date"] = df1["datetime"].apply(lambda x: x.date())
+        df1["time"] = df1["datetime"].apply(lambda x: x.time())
+        with patch.object(logger, "error") as mock_error:
+            check_order_start_stop(df1, logger)
+            mock_error.assert_not_called()
+
+        # Two stop entries after each other -> Error!
+        df2 = df.append(rows[:3], ignore_index=True)
+        df2["date"] = df2["datetime"].apply(lambda x: x.date())
+        df2["time"] = df2["datetime"].apply(lambda x: x.time())
+        with patch.object(logger, "error") as mock_error:
+            check_order_start_stop(df2, logger)
+            mock_error.assert_called_with(
+                '"start_stop" entries on date 2020-01-01 are not ordered correctly.'
+            )
+
+        # First entry is a 'stop' entry -> Error!
+        df3 = df.append(rows[1:2], ignore_index=True)
+        df3["date"] = df3["datetime"].apply(lambda x: x.date())
+        df3["time"] = df3["datetime"].apply(lambda x: x.time())
+        with patch.object(logger, "error") as mock_error:
+            check_order_start_stop(df3, logger)
+            mock_error.assert_called_with(
+                'First entry of type "start_stop" on date 2020-01-01 is not "start".'
+            )
+
+        # Last entry is 'start' and 'stop' entry is missing -> Error!
+        df4 = df.append(rows[0:1], ignore_index=True)
+        df4["date"] = df4["datetime"].apply(lambda x: x.date())
+        df4["time"] = df4["datetime"].apply(lambda x: x.time())
+        with patch.object(logger, "error") as mock_error:
+            check_order_start_stop(df4, logger)
+            mock_error.assert_called_with("Date 2020-01-01 has no stop entry.")
 
 
 class TestArgumentParser(unittest.TestCase):

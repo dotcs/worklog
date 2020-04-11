@@ -15,6 +15,7 @@ from worklog.utils import (
     format_timedelta,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
+    check_order_start_stop,
 )
 
 logger = logging.getLogger("worklog")
@@ -83,22 +84,9 @@ class Log(object):
         self._persist(self._log_df, mode="w")
 
     def doctor(self) -> None:
-        def test_alternating_start_stop(group):
-            last_type = None
-            for i, row in group.where(group["category"] == "start_stop").iterrows():
-                if i == 0 and row["type"] != "start":
-                    logger.error(
-                        f'First entry of type "start_stop" on date {row.date} is not "start".'
-                    )
-                if row["type"] == last_type:
-                    logger.error(
-                        f'"start_stop" entries on date {row.date} are not ordered correctly.'
-                    )
-                last_type = row["type"]
-            if last_type != "stop":
-                logger.error(f"Date {row.date} has no stop entry.")
-
-        self._log_df.groupby("date").apply(test_alternating_start_stop)
+        self._log_df.groupby("date").apply(
+            lambda group: check_order_start_stop(group, logger)
+        )
 
     def status(
         self, hours_target: int, hours_max: int, date: str = "today", fmt: str = None
