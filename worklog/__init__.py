@@ -1,6 +1,7 @@
 import os
 from configparser import ConfigParser
 from argparse import Namespace
+from datetime import date, timedelta
 
 from worklog.utils import configure_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
 from worklog.log import Log
@@ -24,10 +25,10 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
         hours_target = float(cfg.get("workday", "hours_target"))
         hours_max = float(cfg.get("workday", "hours_max"))
         fmt = cli_args.fmt
+        query_date = date.today()
         if cli_args.yesterday:
-            log.status(hours_target, hours_max, date="yesterday", fmt=fmt)
-        else:
-            log.status(hours_target, hours_max, fmt=fmt)
+            query_date -= timedelta(days=1)
+        log.status(hours_target, hours_max, query_date=query_date, fmt=fmt)
     elif cli_args.subcmd == "doctor":
         log.doctor()
     elif cli_args.subcmd == "log":

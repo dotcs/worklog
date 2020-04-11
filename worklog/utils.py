@@ -5,7 +5,7 @@ import sys
 import argparse
 import os
 from functools import reduce
-from datetime import datetime, timezone, timedelta, tzinfo
+from datetime import datetime, date, timezone, timedelta, tzinfo
 
 LOG_FORMAT: str = logging.BASIC_FORMAT
 LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -127,3 +127,14 @@ def check_order_start_stop(df_group: DataFrame, logger: logging.Logger):
         last_type = row["type"]
     if last_type != "stop":
         logger.error(f"Date {row.date} has no stop entry.")
+
+
+def sentinel_datetime(target_date: date, tzinfo=LOCAL_TIMEZONE) -> datetime:
+    if target_date > datetime.now().date():
+        raise ValueError("Only dates on the same day or in the past are supported.")
+    return min(
+        datetime.now(timezone.utc).astimezone(tz=tzinfo).replace(microsecond=0),
+        datetime(
+            target_date.year, target_date.month, target_date.day, 23, 59, 59, 0, tzinfo,
+        ).astimezone(tz=tzinfo),
+    )

@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, date, timedelta, timezone
 import logging
 import os
 import sys
@@ -16,20 +16,32 @@ from worklog.utils import (
     empty_df_from_schema,
     get_datetime_cols_from_schema,
     check_order_start_stop,
+    sentinel_datetime,
 )
 
 logger = logging.getLogger("worklog")
 
 
 class Log(object):
-    _log_fp: str = None
+    # In-memory representation of log
     _log_df: pd.DataFrame = None
+
+    # Backend file config
+    _log_fp: str = None
     _separator: str = None
     _schema: List[Tuple[str, str]] = [
         ("datetime", "datetime64[ns]",),
         ("category", "object",),
         ("type", "object",),
     ]
+
+    # Error messages
+    _err_msg_empty_log = (
+        "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
+    )
+    _err_msg_empty_log_short = "N/A"
+    _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
+    _err_msg_log_data_missing_for_date_short = "N/A"
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -88,62 +100,50 @@ class Log(object):
             lambda group: check_order_start_stop(group, logger)
         )
 
+    def _is_active(self, df: pd.DataFrame):
+        return df.iloc[-1]["type"] == "start" if df.shape[0] > 0 else False
+
     def status(
-        self, hours_target: int, hours_max: int, date: str = "today", fmt: str = None
+        self, hours_target: int, hours_max: int, query_date: date, fmt: str = None
     ) -> None:
         if self._log_df.shape[0] == 0:
             if fmt is None:
-                sys.stderr.write(
-                    "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
-                )
+                sys.stderr.write(self._err_msg_empty_log)
             else:
-                sys.stdout.write("N/A")
+                sys.stdout.write(self._err_msg_empty_log_short)
             return
 
-        query_date = datetime.now().date()
-        if date == "yesterday":
-            query_date -= timedelta(days=1)
+        # Extract the day of interest by selecting a subset of the log
+        # dataframe that matches the queried day.
+        df_day = self._log_df[self._log_df.date == query_date]
+        df_day = df_day[["datetime", "type"]]
 
-        sub_df = self._log_df[self._log_df.date == query_date]
-        sub_df = sub_df[["datetime", "type"]]
-
-        if sub_df.shape[0] == 0:
+        if df_day.shape[0] == 0:
             if fmt is None:
-                sys.stderr.write(f"No log data available for {query_date}.\n")
+                msg = self._err_msg_log_data_missing_for_date.format(
+                    query_date=query_date
+                )
+                sys.stderr.write(msg)
             else:
-                sys.stdout.write("N/A")
+                sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
             return
 
-        is_curr_working = (
-            sub_df.iloc[-1]["type"] == "start" if sub_df.shape[0] > 0 else False
-        )
-        logger.debug(f"Currently working: {is_curr_working}")
+        is_active = self._is_active(df_day)
+        logger.debug(f"Is active: {is_active}")
 
-        if is_curr_working:
-            target_date = sub_df.iloc[0].datetime.date()
-            fill_ts = min(
-                datetime.now(timezone.utc).astimezone().replace(microsecond=0),
-                datetime(
-                    target_date.year,
-                    target_date.month,
-                    target_date.day,
-                    23,
-                    59,
-                    59,
-                    0,
-                    LOCAL_TIMEZONE,
-                ).astimezone(),
-            )
+        if is_active:
+            sdt = sentinel_datetime(query_date)
             # attach another row with the current time
-            help_df = pd.DataFrame(
-                {"datetime": pd.to_datetime(fill_ts.isoformat()), "type": "stop"},
+            sentinel_df = pd.DataFrame(
+                {"datetime": pd.to_datetime(sdt.isoformat()), "type": "stop"},
                 index=[0],
             )
-            sub_df = pd.concat((sub_df, help_df))
-            logger.warning(f"Fill missing stop value with {fill_ts}")
-        sub_df["datetime_shift"] = sub_df["datetime"].shift(1)
-        x = sub_df[sub_df["type"] == "stop"]
-        total_time = (x["datetime"] - x["datetime_shift"]).sum()
+            df_day = pd.concat((df_day, sentinel_df))
+            logger.warning(f"Set sentinel stop value: {sdt}")
+
+        df_day["datetime_shift"] = df_day["datetime"].shift(1)
+        df_day_stop = df_day[df_day["type"] == "stop"]
+        total_time = (df_day_stop["datetime"] - df_day_stop["datetime_shift"]).sum()
         total_time_str = format_timedelta(total_time)
 
         hours_target_dt = timedelta(hours=hours_target)
@@ -171,7 +171,7 @@ class Log(object):
         )
 
         lines = [
-            ("Status", "Tracking on" if is_curr_working else "Tracking off"),
+            ("Status", "Tracking on" if is_active else "Tracking off"),
             ("Total time", "{} ({:3}%)".format(total_time_str, percentage)),
             (
                 "Remaining time",
@@ -180,7 +180,7 @@ class Log(object):
             ("Overtime", "{} ({:3}%)".format(overtime_str, percentage_overtime),),
         ]
 
-        if is_curr_working and date == "today":
+        if is_active and date == "today":
             lines += [("End of work", end_time_str,)]
 
         key_max_len = max([len(line[0]) for line in lines])
@@ -193,7 +193,7 @@ class Log(object):
         else:
             sys.stdout.write(
                 fmt.format(
-                    status="on" if is_curr_working else "off",
+                    status="on" if is_active else "off",
                     percentage=percentage,
                     end_of_work=end_time_str,
                     total_time=total_time_str,
