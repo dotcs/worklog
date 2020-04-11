@@ -8,6 +8,7 @@ import numpy as np
 import subprocess
 import tempfile
 from pathlib import Path
+from io import StringIO
 
 from worklog.utils import (
     LOCAL_TIMEZONE,
@@ -41,20 +42,24 @@ class Log(object):
         try:
             self._log_df = pd.read_csv(
                 self._log_fp, sep=self._separator, parse_dates=date_cols
-            )
+            ).sort_values(by=["datetime"])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
-        self._log_df["date"] = self._log_df["datetime"].apply(lambda x: x.date)
-        self._log_df["time"] = self._log_df["datetime"].apply(lambda x: x.time)
+        self._log_df = self._transform_df(self._log_df)
 
-    def _persist(self, df: pd.DataFrame, reload: bool = False) -> None:
-        persisted_fields = [key for key, _ in self._schema]
-        df[persisted_fields].sort_values(by=["datetime"], ascending=True).to_csv(
-            self._log_fp, sep=self._separator, index=False
+    def _transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        df_copy = df.copy()
+        df_copy["date"] = df["datetime"].apply(lambda x: x.date)
+        df_copy["time"] = df["datetime"].apply(lambda x: x.time)
+        return df_copy
+
+    def _persist(self, df: pd.DataFrame, mode="a") -> None:
+        cols = [col for col, _ in self._schema]
+        header = False if mode == "a" else True
+        df[cols].to_csv(
+            self._log_fp, mode=mode, sep=self._separator, index=False, header=header
         )
-        if reload:
-            self._read()
 
     def commit(self, type_: str, offset_min: int) -> None:
         if type_ not in ["start", "stop"]:
@@ -63,16 +68,19 @@ class Log(object):
         commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
         commit_date += timedelta(minutes=offset_min)
 
-        new_entry = pd.DataFrame(
-            {
-                "datetime": pd.to_datetime(commit_date),
-                "category": "start_stop",
-                "type": type_,
-            },
-            index=[0],
-        )
-        df = pd.concat((self._log_df, new_entry))
-        self._persist(df, reload=True)
+        cols = [col for col, _ in self._schema]
+        values = [pd.to_datetime(commit_date), "start_stop", type_]
+
+        record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
+        record_t = self._transform_df(record)
+
+        # append record to in-memory log
+        self._log_df = pd.concat((self._log_df, record_t))
+
+        # Because we allow for time offsets sorting is not guaranteed at this point.
+        # Update sorting of values in-memory and overwrite the log on disk.
+        self._log_df = self._log_df.sort_values(by=["datetime"])
+        self._persist(self._log_df, mode="w")
 
     def doctor(self) -> None:
         def test_alternating_start_stop(group):
