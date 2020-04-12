@@ -30,7 +30,8 @@ class Log(object):
     _log_fp: Optional[str] = None
     _separator: Optional[str] = None
     _schema: List[Tuple[str, str]] = [
-        ("datetime", "datetime64[ns]",),
+        ("commit_dt", "datetime64[ns]",),
+        ("log_dt", "datetime64[ns]",),
         ("category", "object",),
         ("type", "object",),
     ]
@@ -55,7 +56,7 @@ class Log(object):
         try:
             self._log_df = pd.read_csv(
                 self._log_fp, sep=self._separator, parse_dates=date_cols
-            ).sort_values(by=["datetime"])
+            ).sort_values(by=["log_dt"])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
@@ -63,8 +64,8 @@ class Log(object):
 
     def _transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
         df_copy = df.copy()
-        df_copy["date"] = df["datetime"].apply(lambda x: x.date)
-        df_copy["time"] = df["datetime"].apply(lambda x: x.time)
+        df_copy["date"] = df["log_dt"].apply(lambda x: x.date)
+        df_copy["time"] = df["log_dt"].apply(lambda x: x.time)
         return df_copy
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
@@ -79,24 +80,30 @@ class Log(object):
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
         commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-        commit_date += timedelta(minutes=offset_min)
+        log_date = commit_date + timedelta(minutes=offset_min)
 
         cols = [col for col, _ in self._schema]
-        values = [pd.to_datetime(commit_date), "start_stop", type_]
+        values = [
+            pd.to_datetime(commit_date),
+            pd.to_datetime(log_date),
+            "start_stop",
+            type_,
+        ]
 
         record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
         record_t = self._transform_df(record)
 
         # append record to in-memory log
         self._log_df = pd.concat((self._log_df, record_t))
+        # and persist to disk
+        self._persist(record_t, mode="a")
 
         # Because we allow for time offsets sorting is not guaranteed at this point.
-        # Update sorting of values in-memory and overwrite the log on disk.
-        self._log_df = self._log_df.sort_values(by=["datetime"])
-        self._persist(self._log_df, mode="w")
+        # Update sorting of values in-memory.
+        self._log_df = self._log_df.sort_values(by=["log_dt"])
 
     def doctor(self) -> None:
-        self._log_df.groupby("date").apply(
+        self._log_df.groupby(["date"]).apply(
             lambda group: check_order_start_stop(group, logger)
         )
 
@@ -116,7 +123,7 @@ class Log(object):
         # Extract the day of interest by selecting a subset of the log
         # dataframe that matches the queried day.
         df_day = self._log_df[self._log_df.date == query_date]
-        df_day = df_day[["datetime", "type"]]
+        df_day = df_day[["log_dt", "type"]]
 
         if df_day.shape[0] == 0:
             if fmt is None:
@@ -135,15 +142,14 @@ class Log(object):
             sdt = sentinel_datetime(query_date)
             # attach another row with the current time
             sentinel_df = pd.DataFrame(
-                {"datetime": pd.to_datetime(sdt.isoformat()), "type": "stop"},
-                index=[0],
+                {"log_dt": pd.to_datetime(sdt.isoformat()), "type": "stop",}, index=[0],
             )
             df_day = pd.concat((df_day, sentinel_df))
             logger.warning(f"Set sentinel stop value: {sdt}")
 
-        df_day["datetime_shift"] = df_day["datetime"].shift(1)
+        df_day["log_dt_s"] = df_day["log_dt"].shift(1)
         df_day_stop = df_day[df_day["type"] == "stop"]
-        total_time = (df_day_stop["datetime"] - df_day_stop["datetime_shift"]).sum()
+        total_time = (df_day_stop["log_dt"] - df_day_stop["log_dt_s"]).sum()
         total_time_str = format_timedelta(total_time)
 
         hours_target_dt = timedelta(hours=hours_target)

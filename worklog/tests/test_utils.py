@@ -38,7 +38,8 @@ class TestUtils(unittest.TestCase):
 
     def test_empty_df_from_schema(self):
         schema = [
-            ("datetime", "datetime64[ns]",),
+            ("commit_dt", "datetime64[ns]",),
+            ("log_dt", "datetime64[ns]",),
             ("category", "object",),
             ("type", "object",),
         ]
@@ -46,40 +47,41 @@ class TestUtils(unittest.TestCase):
         df = empty_df_from_schema(schema)
         self.assertListEqual(
             df.dtypes.values.tolist(),
-            [np.dtype("<M8[ns]"), np.dtype("O"), np.dtype("O")],
+            [np.dtype("<M8[ns]"), np.dtype("<M8[ns]"), np.dtype("O"), np.dtype("O")],
         )
-        self.assertTupleEqual(df.shape, (0, 3))
+        self.assertTupleEqual(df.shape, (0, len(schema)))
 
     def test_get_datetime_cols_from_schema(self):
         schema = [
-            ("datetime", "datetime64[ns]",),
+            ("commit_dt", "datetime64[ns]",),
+            ("log_dt", "datetime64[ns]",),
             ("category", "object",),
             ("type", "object",),
         ]
 
         actual = get_datetime_cols_from_schema(schema)
-        self.assertListEqual(["datetime"], actual)
+        self.assertListEqual(["commit_dt", "log_dt"], actual)
 
     def test_check_order_start_stop(self):
         schema = [
-            ("datetime", "datetime64[ns]",),
+            ("log_dt", "datetime64[ns]",),
             ("category", "object",),
             ("type", "object",),
         ]
 
         rows = [
             {
-                "datetime": datetime(2020, 1, 1, 0, 0, 0, 0, timezone.utc),
+                "log_dt": datetime(2020, 1, 1, 0, 0, 0, 0, timezone.utc),
                 "category": "start_stop",
                 "type": "start",
             },
             {
-                "datetime": datetime(2020, 1, 1, 1, 0, 0, 0, timezone.utc),
+                "log_dt": datetime(2020, 1, 1, 1, 0, 0, 0, timezone.utc),
                 "category": "start_stop",
                 "type": "stop",
             },
             {
-                "datetime": datetime(2020, 1, 1, 2, 0, 0, 0, timezone.utc),
+                "log_dt": datetime(2020, 1, 1, 2, 0, 0, 0, timezone.utc),
                 "category": "start_stop",
                 "type": "stop",
             },
@@ -90,16 +92,16 @@ class TestUtils(unittest.TestCase):
 
         # Positive case
         df1 = df.append(rows[:2], ignore_index=True)
-        df1["date"] = df1["datetime"].apply(lambda x: x.date())
-        df1["time"] = df1["datetime"].apply(lambda x: x.time())
+        df1["date"] = df1["log_dt"].apply(lambda x: x.date())
+        df1["time"] = df1["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
             check_order_start_stop(df1, logger)
             mock_error.assert_not_called()
 
         # Two stop entries after each other -> Error!
         df2 = df.append(rows[:3], ignore_index=True)
-        df2["date"] = df2["datetime"].apply(lambda x: x.date())
-        df2["time"] = df2["datetime"].apply(lambda x: x.time())
+        df2["date"] = df2["log_dt"].apply(lambda x: x.date())
+        df2["time"] = df2["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
             check_order_start_stop(df2, logger)
             mock_error.assert_called_with(
@@ -108,8 +110,8 @@ class TestUtils(unittest.TestCase):
 
         # First entry is a 'stop' entry -> Error!
         df3 = df.append(rows[1:2], ignore_index=True)
-        df3["date"] = df3["datetime"].apply(lambda x: x.date())
-        df3["time"] = df3["datetime"].apply(lambda x: x.time())
+        df3["date"] = df3["log_dt"].apply(lambda x: x.date())
+        df3["time"] = df3["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
             check_order_start_stop(df3, logger)
             mock_error.assert_called_with(
@@ -118,8 +120,8 @@ class TestUtils(unittest.TestCase):
 
         # Last entry is 'start' and 'stop' entry is missing -> Error!
         df4 = df.append(rows[0:1], ignore_index=True)
-        df4["date"] = df4["datetime"].apply(lambda x: x.date())
-        df4["time"] = df4["datetime"].apply(lambda x: x.time())
+        df4["date"] = df4["log_dt"].apply(lambda x: x.date())
+        df4["time"] = df4["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
             check_order_start_stop(df4, logger)
             mock_error.assert_called_with("Date 2020-01-01 has no stop entry.")
