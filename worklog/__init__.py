@@ -14,7 +14,12 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     """
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
-            log.commit("start_stop", cli_args.type, cli_args.offset_minutes)
+            log.commit(
+                "start_stop",
+                cli_args.type,
+                cli_args.offset_minutes,
+                force=cli_args.force,
+            )
         elif cli_args.type == "undo":
             # entries = WorkLogEntries()
             # entries.parse(worklog_fp)

@@ -17,6 +17,7 @@ from worklog.utils import (
     get_datetime_cols_from_schema,
     check_order_start_stop,
     sentinel_datetime,
+    get_active_task_ids,
 )
 
 logger = logging.getLogger("worklog")
@@ -44,6 +45,7 @@ class Log(object):
     _err_msg_empty_log_short = "N/A"
     _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
+    _err_msg_commit_active_tasks = "Fatal. Cannot stop, because tasks are still running. Stop running tasks first: {active_tasks:} or use --force flag.\n"
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -81,13 +83,32 @@ class Log(object):
         )
 
     def commit(
-        self, category: str, type_: str, offset_min: int, identifier: str = None
+        self,
+        category: str,
+        type_: str,
+        offset_min: int,
+        identifier: str = None,
+        force: bool = False,
     ) -> None:
         if type_ not in ["start", "stop"]:
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
         commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
         log_date = commit_date + timedelta(minutes=offset_min)
+
+        # Test if there are running tasks
+        if category == "start_stop":
+            active_tasks = get_active_task_ids(self._log_df, log_date.date())
+            if len(active_tasks) > 0:
+                if not force:
+                    msg = self._err_msg_commit_active_tasks.format(
+                        active_tasks=active_tasks
+                    )
+                    sys.stderr.write(msg)
+                    sys.exit(1)
+                else:
+                    for task_id in active_tasks:
+                        self.commit("task", "stop", offset_min, task_id)
 
         cols = [col for col, _ in self._schema]
         values = [
@@ -131,6 +152,7 @@ class Log(object):
         # Extract the day of interest by selecting a subset of the log
         # dataframe that matches the queried day.
         df_day = self._log_df[self._log_df.date == query_date]
+        df_day = df_day[df_day["category"] == "start_stop"]
         df_day = df_day[["log_dt", "type"]]
 
         if df_day.shape[0] == 0:
@@ -184,11 +206,7 @@ class Log(object):
             0,
         )
 
-        df_day = self._log_df[self._log_df.date == query_date]
-        df_day = df_day[df_day.category == "task"]
-        df_day = df_day[["log_dt", "category", "type", "identifier"]]
-        df_tmp = df_day.groupby("identifier").tail(1)
-        active_tasks = df_tmp[df_tmp["type"] == "start"]["identifier"].unique()
+        active_tasks = get_active_task_ids(self._log_df, query_date)
 
         lines = [
             ("Status", "Tracking on" if is_active else "Tracking off"),
@@ -198,7 +216,7 @@ class Log(object):
                 "{} ({:3}%)".format(remaining_time_str, percentage_remaining),
             ),
             ("Overtime", "{} ({:3}%)".format(overtime_str, percentage_overtime),),
-            ("Active tasks", active_tasks,),
+            ("Active tasks", "[" + ", ".join(active_tasks) + "]",),
         ]
 
         if is_active and date == "today":

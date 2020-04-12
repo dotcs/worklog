@@ -65,6 +65,12 @@ def get_arg_parser() -> argparse.ArgumentParser:
         default=0,
         help="Offset of the start/stop time in minutes",
     )
+    commit_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Force command, will auto-stop running tasks",
+    )
 
     task_parser = subparsers.add_parser("task")
     task_parser.add_argument(
@@ -154,3 +160,11 @@ def sentinel_datetime(
             target_date.year, target_date.month, target_date.day, 23, 59, 59, 0, tzinfo,
         ).astimezone(tz=tzinfo),
     )
+
+
+def get_active_task_ids(df: DataFrame, query_date: date):
+    df_day = df[df["date"] == query_date]
+    df_day = df_day[df_day.category == "task"]
+    df_day = df_day[["log_dt", "type", "identifier"]]
+    df_grouped = df_day.groupby("identifier").tail(1)
+    return sorted(df_grouped[df_grouped["type"] == "start"]["identifier"].unique())
