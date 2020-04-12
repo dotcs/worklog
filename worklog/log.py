@@ -15,7 +15,7 @@ from worklog.utils import (
     format_timedelta,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
-    check_order_start_stop,
+    check_order_session,
     sentinel_datetime,
     get_active_task_ids,
 )
@@ -97,7 +97,7 @@ class Log(object):
         log_date = commit_date + timedelta(minutes=offset_min)
 
         # Test if there are running tasks
-        if category == "start_stop":
+        if category == "session":
             active_tasks = get_active_task_ids(self._log_df, log_date.date())
             if len(active_tasks) > 0:
                 if not force:
@@ -133,7 +133,7 @@ class Log(object):
 
     def doctor(self) -> None:
         self._log_df.groupby(["date"]).apply(
-            lambda group: check_order_start_stop(group, logger)
+            lambda group: check_order_session(group, logger)
         )
 
     def _is_active(self, df: pd.DataFrame):
@@ -152,7 +152,7 @@ class Log(object):
         # Extract the day of interest by selecting a subset of the log
         # dataframe that matches the queried day.
         df_day = self._log_df[self._log_df.date == query_date]
-        df_day = df_day[df_day["category"] == "start_stop"]
+        df_day = df_day[df_day["category"] == "session"]
         df_day = df_day[["log_dt", "type"]]
 
         if df_day.shape[0] == 0:

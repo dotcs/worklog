@@ -15,7 +15,7 @@ from worklog.utils import (
     _positive_int,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
-    check_order_start_stop,
+    check_order_session,
     sentinel_datetime,
 )
 
@@ -62,7 +62,7 @@ class TestUtils(unittest.TestCase):
         actual = get_datetime_cols_from_schema(schema)
         self.assertListEqual(["commit_dt", "log_dt"], actual)
 
-    def test_check_order_start_stop(self):
+    def test_check_order_session(self):
         schema = [
             ("log_dt", "datetime64[ns]",),
             ("category", "object",),
@@ -72,22 +72,22 @@ class TestUtils(unittest.TestCase):
         rows = [
             {
                 "log_dt": datetime(2020, 1, 1, 0, 0, 0, 0, timezone.utc),
-                "category": "start_stop",
+                "category": "session",
                 "type": "start",
             },
             {
                 "log_dt": datetime(2020, 1, 1, 1, 0, 0, 0, timezone.utc),
-                "category": "start_stop",
+                "category": "session",
                 "type": "stop",
             },
             {
                 "log_dt": datetime(2020, 1, 1, 2, 0, 0, 0, timezone.utc),
-                "category": "start_stop",
+                "category": "session",
                 "type": "stop",
             },
         ]
 
-        logger = logging.getLogger("test_check_order_start_stop")
+        logger = logging.getLogger("test_check_order_session")
         df = empty_df_from_schema(schema)
 
         # Positive case
@@ -95,7 +95,7 @@ class TestUtils(unittest.TestCase):
         df1["date"] = df1["log_dt"].apply(lambda x: x.date())
         df1["time"] = df1["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
-            check_order_start_stop(df1, logger)
+            check_order_session(df1, logger)
             mock_error.assert_not_called()
 
         # Two stop entries after each other -> Error!
@@ -103,9 +103,9 @@ class TestUtils(unittest.TestCase):
         df2["date"] = df2["log_dt"].apply(lambda x: x.date())
         df2["time"] = df2["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
-            check_order_start_stop(df2, logger)
+            check_order_session(df2, logger)
             mock_error.assert_called_with(
-                '"start_stop" entries on date 2020-01-01 are not ordered correctly.'
+                '"session" entries on date 2020-01-01 are not ordered correctly.'
             )
 
         # First entry is a 'stop' entry -> Error!
@@ -113,9 +113,9 @@ class TestUtils(unittest.TestCase):
         df3["date"] = df3["log_dt"].apply(lambda x: x.date())
         df3["time"] = df3["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
-            check_order_start_stop(df3, logger)
+            check_order_session(df3, logger)
             mock_error.assert_called_with(
-                'First entry of type "start_stop" on date 2020-01-01 is not "start".'
+                'First entry of type "session" on date 2020-01-01 is not "start".'
             )
 
         # Last entry is 'start' and 'stop' entry is missing -> Error!
@@ -123,7 +123,7 @@ class TestUtils(unittest.TestCase):
         df4["date"] = df4["log_dt"].apply(lambda x: x.date())
         df4["time"] = df4["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
-            check_order_start_stop(df4, logger)
+            check_order_session(df4, logger)
             mock_error.assert_called_with("Date 2020-01-01 has no stop entry.")
 
     @patch("worklog.utils.datetime")

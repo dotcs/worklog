@@ -133,16 +133,16 @@ def get_datetime_cols_from_schema(schema: Iterable[Tuple[str, str]]) -> List[str
     return reduce(reducer, schema, [])
 
 
-def check_order_start_stop(df_group: DataFrame, logger: logging.Logger):
+def check_order_session(df_group: DataFrame, logger: logging.Logger):
     last_type = None
-    for i, row in df_group.where(df_group["category"] == "start_stop").iterrows():
+    for i, row in df_group.where(df_group["category"] == "session").iterrows():
         if i == 0 and row["type"] != "start":
             logger.error(
-                f'First entry of type "start_stop" on date {row.date} is not "start".'
+                f'First entry of type "session" on date {row.date} is not "start".'
             )
         if row["type"] == last_type:
             logger.error(
-                f'"start_stop" entries on date {row.date} are not ordered correctly.'
+                f'"session" entries on date {row.date} are not ordered correctly.'
             )
         last_type = row["type"]
     if last_type != "stop":

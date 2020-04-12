@@ -15,7 +15,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
             log.commit(
-                "start_stop",
+                "session",
                 cli_args.type,
                 cli_args.offset_minutes,
                 force=cli_args.force,
