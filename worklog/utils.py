@@ -66,6 +66,20 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Offset of the start/stop time in minutes",
     )
 
+    task_parser = subparsers.add_parser("task")
+    task_parser.add_argument(
+        "type", choices=["start", "stop", "list"], help="Starts/stops or list tasks",
+    )
+    task_parser.add_argument(
+        "--id", type=str, help="Task identifier",
+    )
+    task_parser.add_argument(
+        "--offset-minutes",
+        type=float,
+        default=0,
+        help="Offset of the start/stop time in minutes",
+    )
+
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument(
         "--yesterday",

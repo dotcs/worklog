@@ -34,6 +34,7 @@ class Log(object):
         ("log_dt", "datetime64[ns]",),
         ("category", "object",),
         ("type", "object",),
+        ("identifier", "object",),
     ]
 
     # Error messages
@@ -53,9 +54,14 @@ class Log(object):
 
     def _read(self) -> None:
         date_cols = get_datetime_cols_from_schema(self._schema)
+        header = [col for col, _ in self._schema]
         try:
             self._log_df = pd.read_csv(
-                self._log_fp, sep=self._separator, parse_dates=date_cols
+                self._log_fp,
+                sep=self._separator,
+                parse_dates=date_cols,
+                header=None,
+                names=header,
             ).sort_values(by=["log_dt"])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
@@ -70,12 +76,13 @@ class Log(object):
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
-        header = False if mode == "a" else True
         df[cols].to_csv(
-            self._log_fp, mode=mode, sep=self._separator, index=False, header=header
+            self._log_fp, mode=mode, sep=self._separator, index=False, header=False
         )
 
-    def commit(self, type_: str, offset_min: int) -> None:
+    def commit(
+        self, category: str, type_: str, offset_min: int, identifier: str = None
+    ) -> None:
         if type_ not in ["start", "stop"]:
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
@@ -86,8 +93,9 @@ class Log(object):
         values = [
             pd.to_datetime(commit_date),
             pd.to_datetime(log_date),
-            "start_stop",
+            category,
             type_,
+            identifier,
         ]
 
         record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
@@ -176,6 +184,12 @@ class Log(object):
             0,
         )
 
+        df_day = self._log_df[self._log_df.date == query_date]
+        df_day = df_day[df_day.category == "task"]
+        df_day = df_day[["log_dt", "category", "type", "identifier"]]
+        df_tmp = df_day.groupby("identifier").tail(1)
+        active_tasks = df_tmp[df_tmp["type"] == "start"]["identifier"].unique()
+
         lines = [
             ("Status", "Tracking on" if is_active else "Tracking off"),
             ("Total time", "{} ({:3}%)".format(total_time_str, percentage)),
@@ -184,6 +198,7 @@ class Log(object):
                 "{} ({:3}%)".format(remaining_time_str, percentage_remaining),
             ),
             ("Overtime", "{} ({:3}%)".format(overtime_str, percentage_overtime),),
+            ("Active tasks", active_tasks,),
         ]
 
         if is_active and date == "today":
@@ -231,3 +246,9 @@ class Log(object):
             process = subprocess.Popen([pager, fh.name])
             process.wait()
             fh.close()
+
+    def list_tasks(self):
+        task_df = self._log_df[self._log_df["category"] == "task"]
+        sys.stdout.write("These tasks are listed in the log:\n")
+        for task_id in sorted(task_df["identifier"].unique()):
+            sys.stdout.write(f"{task_id}\n")

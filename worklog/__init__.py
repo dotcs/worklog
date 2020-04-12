@@ -1,6 +1,6 @@
 import os
 from configparser import ConfigParser
-from argparse import Namespace
+from argparse import Namespace, ArgumentError
 from datetime import date, timedelta
 
 from worklog.utils import configure_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
@@ -14,13 +14,24 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     """
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
-            log.commit(cli_args.type, cli_args.offset_minutes)
+            log.commit("start_stop", cli_args.type, cli_args.offset_minutes)
         elif cli_args.type == "undo":
             # entries = WorkLogEntries()
             # entries.parse(worklog_fp)
             # entries.undo()
             # entries.persist(worklog_fp, mode='overwrite')
             pass
+    elif cli_args.subcmd == "task":
+        if cli_args.type in ["start", "stop"]:
+            if cli_args.id is None:
+                raise ArgumentError(
+                    cli_args.id, "--id is required when a new task is started/stopped"
+                )
+            log.commit(
+                "task", cli_args.type, cli_args.offset_minutes, identifier=cli_args.id
+            )
+        elif cli_args.type == "list":
+            log.list_tasks()
     elif cli_args.subcmd == "status":
         hours_target = float(cfg.get("workday", "hours_target"))
         hours_max = float(cfg.get("workday", "hours_max"))
