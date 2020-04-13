@@ -15,10 +15,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
             log.commit(
-                "session",
-                cli_args.type,
-                cli_args.offset_minutes,
-                force=cli_args.force,
+                "session", cli_args.type, cli_args.offset_minutes, force=cli_args.force,
             )
         elif cli_args.type == "undo":
             # entries = WorkLogEntries()
@@ -37,6 +34,12 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
             )
         elif cli_args.type == "list":
             log.list_tasks()
+        elif cli_args.type == "report":
+            if cli_args.id is None:
+                raise ArgumentError(
+                    cli_args.id, "--id is required when requesting a report"
+                )
+            log.task_report(cli_args.id)
     elif cli_args.subcmd == "status":
         hours_target = float(cfg.get("workday", "hours_target"))
         hours_max = float(cfg.get("workday", "hours_max"))

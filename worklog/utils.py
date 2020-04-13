@@ -74,7 +74,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     task_parser = subparsers.add_parser("task")
     task_parser.add_argument(
-        "type", choices=["start", "stop", "list"], help="Starts/stops or list tasks",
+        "type",
+        choices=["start", "stop", "list", "report"],
+        help="Starts/stops or list tasks",
     )
     task_parser.add_argument(
         "--id", type=str, help="Task identifier",
@@ -168,3 +170,40 @@ def get_active_task_ids(df: DataFrame, query_date: date):
     df_day = df_day[["log_dt", "type", "identifier"]]
     df_grouped = df_day.groupby("identifier").tail(1)
     return sorted(df_grouped[df_grouped["type"] == "start"]["identifier"].unique())
+
+
+def extract_intervals(
+    df: DataFrame,
+    dt_col: str = "log_dt",
+    token_start: str = "start",
+    token_stop: str = "stop",
+    logger: Optional[logging.Logger] = None,
+):
+    def log_error(msg):
+        if logger:
+            logger.error(msg)
+
+    intervals = []
+    last_start: Optional[datetime] = None
+    for i, row in df.iterrows():
+        if row["type"] == "start":
+            if last_start is not None:
+                log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
+            last_start = row[dt_col]
+        elif row["type"] == "stop":
+            if last_start is None:
+                log_error("No start entry found. Skip entry.")
+                continue  # skip this entry
+            td = row[dt_col] - last_start
+            d = last_start.date()
+            intervals.append(
+                {"date": d, "start": last_start, "stop": row[dt_col], "interval": td}
+            )
+            last_start = None
+        else:
+            log_error(f"Found unknown type {row['type']}. Skip entry.")
+            continue
+    if last_start is not None:
+        log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
+
+    return DataFrame(intervals)

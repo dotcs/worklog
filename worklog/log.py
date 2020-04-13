@@ -18,6 +18,7 @@ from worklog.utils import (
     check_order_session,
     sentinel_datetime,
     get_active_task_ids,
+    extract_intervals,
 )
 
 logger = logging.getLogger("worklog")
@@ -270,3 +271,48 @@ class Log(object):
         sys.stdout.write("These tasks are listed in the log:\n")
         for task_id in sorted(task_df["identifier"].unique()):
             sys.stdout.write(f"{task_id}\n")
+
+    def task_report(self, task_id):
+        task_mask = self._log_df["category"] == "task"
+        task_id_mask = self._log_df["identifier"] == task_id
+        mask = task_mask & task_id_mask
+        task_df = self._log_df[mask]
+
+        if task_df.shape[0] == 0:
+            sys.stderr.write(
+                f"Task ID {task_id} is unknown. See 'wl task list' to list all known tasks.\n"
+            )
+            exit(1)
+
+        intervals = extract_intervals(task_df, logger=logger)
+
+        intervals_detailed = intervals[["date", "start", "stop", "interval"]].rename(
+            columns={
+                "date": "Date",
+                "start": "Start",
+                "stop": "Stop",
+                "interval": "Duration",
+            }
+        )
+        print("Log entries:\n")
+        print(
+            intervals_detailed.to_string(
+                index=False,
+                formatters={
+                    "Start": lambda x: x.strftime("%H:%M:%S"),
+                    "Stop": lambda x: x.strftime("%H:%M:%S"),
+                    "Duration": lambda x: format_timedelta(
+                        timedelta(microseconds=int(x) / 1e3)
+                    ),
+                },
+            )
+        )
+
+        print("---")
+        print("Daily aggregated:\n")
+        intervals_daily = intervals.groupby(by="date")[["interval"]].sum()
+        intervals_daily.index.name = "Date"
+        intervals_daily = intervals_daily.rename(columns={"interval": "Duration"})
+        print(intervals_daily.to_string())
+
+        print(f"---\nTotal: {intervals_detailed['Duration'].sum()}")
