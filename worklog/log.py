@@ -146,6 +146,7 @@ class Log(object):
         if self._log_df.shape[0] == 0:
             if fmt is None:
                 sys.stderr.write(self._err_msg_empty_log)
+                sys.exit(1)
             else:
                 sys.stdout.write(self._err_msg_empty_log_short)
             return
