@@ -8,7 +8,7 @@ with open("requirements.txt", "r") as fh:
 
 setuptools.setup(
     name="dcs-worklog",
-    version="0.0.3",
+    version="0.0.4",
     author="Fabian Mueller",
     author_email="repository@dotcs.me",
     description="Simple CLI tool to log work and projects",
