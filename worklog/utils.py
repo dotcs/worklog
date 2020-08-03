@@ -59,12 +59,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
         choices=["start", "stop", "undo"],
         help="Commits a new entry to the log.",
     )
-    commit_parser.add_argument(
+    timeshift_grp = commit_parser.add_mutually_exclusive_group()
+    timeshift_grp.add_argument(
         "--offset-minutes",
         type=float,
         default=0,
         help="Offset of the start/stop time in minutes",
     )
+    timeshift_grp.add_argument("--time", help="Exact point in time")
     commit_parser.add_argument(
         "-f",
         "--force",
