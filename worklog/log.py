@@ -88,6 +88,7 @@ class Log(object):
         category: str,
         type_: str,
         offset_min: int,
+        time: Optional[str],
         identifier: str = None,
         force: bool = False,
     ) -> None:
@@ -96,6 +97,11 @@ class Log(object):
 
         commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
         log_date = commit_date + timedelta(minutes=offset_min)
+
+        if time is not None:
+            h_time = datetime.strptime(time, "%H:%M")
+            hour, minute = h_time.hour, h_time.minute
+            log_date = log_date.replace(hour=hour, minute=minute, second=0)
 
         # Test if there are running tasks
         if category == "session":

@@ -15,7 +15,11 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
     if cli_args.subcmd == "commit":
         if cli_args.type in ["start", "stop"]:
             log.commit(
-                "session", cli_args.type, cli_args.offset_minutes, force=cli_args.force,
+                "session",
+                cli_args.type,
+                cli_args.offset_minutes,
+                cli_args.time,
+                force=cli_args.force,
             )
         elif cli_args.type == "undo":
             # entries = WorkLogEntries()
@@ -30,7 +34,11 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
                     cli_args.id, "--id is required when a new task is started/stopped"
                 )
             log.commit(
-                "task", cli_args.type, cli_args.offset_minutes, identifier=cli_args.id
+                "task",
+                cli_args.type,
+                cli_args.offset_minutes,
+                None,
+                identifier=cli_args.id,
             )
         elif cli_args.type == "list":
             log.list_tasks()
