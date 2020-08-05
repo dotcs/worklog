@@ -259,9 +259,9 @@ class Log(object):
             return
 
         fields = ["date", "time", "category", "type"]
-        df = self._log_df[fields].iloc[::-1]
+        df = self._log_df[fields].iloc[::-1]  # sort in reverse (latest first)
         if n > 0:
-            df = df.tail(n=n)
+            df = df.head(n=n)
         if not use_pager:
             sys.stdout.write(df.to_string(index=False) + "\n")
         else:
