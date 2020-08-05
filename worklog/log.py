@@ -258,8 +258,9 @@ class Log(object):
             sys.stdout.write("No data available\n")
             return
 
-        fields = ["date", "time", "category", "type"]
+        fields = ["date", "time", "category", "type", "identifier"]
         df = self._log_df[fields].iloc[::-1]  # sort in reverse (latest first)
+        df["identifier"] = df["identifier"].fillna("-")
         if n > 0:
             df = df.head(n=n)
         if not use_pager:
