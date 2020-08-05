@@ -9,7 +9,9 @@ process the logged information with other tools.
 You need to have Python >= 3.6 installed.
 
 ```bash
-pip install dcs-worklog
+# Install from PyPi Test-Servers as long as the version has not been published
+# to the official registry yet.
+pip install --index-url https://test.pypi.org/simple/ dcs-worklog
 ```
 
 ### Command Line Interface (CLI)
@@ -98,7 +100,26 @@ ERROR:worklog:Date 2020-04-08 has no stop entry.
 Clone this repository and install the development version:
 
 ```bash
-pip install -e .
+pip install -e ".[testing]"
+```
+
+Run tests via
+
+```bash
+pytest worklog/
+```
+
+### Create a release
+
+**Attention**: Currently the software is released to the PyPi-Test-Channel
+*only.
+
+To create a release, update the version number in setup.py first.
+Then execute the following commands:
+
+```bash
+python setup.py sdist bdist_wheel
+twine upload -r testpypi dist/*
 ```
 
 ## Planned features
