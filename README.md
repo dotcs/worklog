@@ -125,11 +125,6 @@ twine upload -r testpypi dist/*
 ## Planned features
 
 ```bash
-wl task create <NAME>
-wl task list
-wl task delete <NAME>
-wl commit start --task <taskID>
-
 wl report --today
 wl report --yesterday
 wl report --current-month
