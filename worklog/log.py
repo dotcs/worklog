@@ -123,7 +123,7 @@ class Log(object):
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
-                        self.commit("task", "stop", offset_min, task_id)
+                        self.commit("task", "stop", offset_min, time, task_id)
 
         cols = [col for col, _ in self._schema]
         values = [
