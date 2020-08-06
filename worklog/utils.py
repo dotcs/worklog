@@ -123,6 +123,15 @@ def get_arg_parser() -> argparse.ArgumentParser:
     log_parser.add_argument(
         "--category", choices=["session", "task"], help="Filter category",
     )
+    log_parser.add_argument(
+        "--no-pager",
+        action="store_true",
+        help=(
+            "Don't use a the system pager. "
+            "Prints all output to STDOUT regardless of how many entries will be shown. "
+            "This flag should be used if there are problems with the system pager."
+        ),
+    )
 
     return parser
 
