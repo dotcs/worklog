@@ -56,9 +56,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     commit_parser = subparsers.add_parser("commit")
     commit_parser.add_argument(
-        "type",
-        choices=["start", "stop", "undo"],
-        help="Commits a new entry to the log.",
+        "type", choices=["start", "stop"], help="Commits a new entry to the log.",
     )
     timeshift_grp = commit_parser.add_mutually_exclusive_group()
     timeshift_grp.add_argument(

@@ -22,12 +22,6 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
                 cli_args.time,
                 force=cli_args.force,
             )
-        elif cli_args.type == "undo":
-            # entries = WorkLogEntries()
-            # entries.parse(worklog_fp)
-            # entries.undo()
-            # entries.persist(worklog_fp, mode='overwrite')
-            pass
     elif cli_args.subcmd == "task":
         if cli_args.type in ["start", "stop"]:
             if cli_args.id is None:
@@ -61,7 +55,8 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
         log.doctor()
     elif cli_args.subcmd == "log":
         n = cli_args.number
-        use_pager = not cli_args.no_pager and (cli_args.all or n > 20)
+        no_pager_max_entries = int(cfg.get("worklog", "no_pager_max_entries"))
+        use_pager = not cli_args.no_pager and (cli_args.all or n > no_pager_max_entries)
         categories = cli_args.category
         if not cli_args.all:
             log.log(cli_args.number, use_pager, categories)
