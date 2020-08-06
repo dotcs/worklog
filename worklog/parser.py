@@ -1,3 +1,6 @@
+from typing import List
+from datetime import datetime
+import re
 import argparse
 
 _help_time_arg = (
@@ -83,9 +86,22 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     report_parser = subparsers.add_parser("report")
-    report_parser.add_argument("--time", help=_help_time_arg)
+    report_parser.add_argument(
+        "--month-from", required=True, type=_year_month_parser, help=""
+    )
+    report_parser.add_argument(
+        "--month-to", required=True, type=_year_month_parser, help=""
+    )
 
     return parser
+
+
+def _year_month_parser(value: str) -> datetime:
+    local_tz = datetime.utcnow().astimezone().tzinfo
+    if not re.match("\d{4}\-\d{2}", value):
+        raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM")
+    year, month = [int(x) for x in value.split("-")]
+    return datetime(year=year, month=month, day=1, tzinfo=local_tz)
 
 
 def _positive_int(value: str) -> int:

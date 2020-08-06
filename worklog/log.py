@@ -88,9 +88,9 @@ class Log(object):
         Extracts date and time information from a given pandas DataFrame.
         By default the source column is `log_dt`.
         """
-        date = df[source_col].apply(lambda x: x.date)
-        time = df[source_col].apply(lambda x: x.time)
-        return pd.DataFrame(dict(date=date, time=time))
+        date: pd.Series = df[source_col].apply(lambda x: x.date)
+        time: pd.Series = df[source_col].apply(lambda x: x.time)
+        return pd.DataFrame(dict(date=date, time=time),)
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
@@ -384,20 +384,44 @@ class Log(object):
 
         print(f"---\nTotal: {intervals_detailed['Duration'].sum()}")
 
-    def report(
-        self, time: Optional[str],
-    ):
-        raise NotImplementedError()  # TODO: Finish implementation
-
-        dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-        if time is not None:
-            dt = get_or_update_dt(dt, time)
-
-        sub_df = (
-            self._log_df.set_index("log_dt")
-            .loc[dt.isoformat()[: len("2000-01-01")]]
-            .reset_index()
+    def report(self, month_from: datetime, month_to: datetime):
+        # month_to_excl = (month_to + timedelta(days=31)).replace(day=1)
+        time_mask = (self._log_df["log_dt"] >= month_from) & (
+            self._log_df["log_dt"] < month_to
         )
-        sub_df_session = sub_df[sub_df.category == "session"]
-        print(sub_df_session)
+        session_mask = self._log_df["category"] == "session"
+        df = self._log_df[time_mask & session_mask]
+
+        shifted_dt = df["log_dt"].shift(1)
+        stop_mask = df["type"] == "stop"
+        agg_time = df[stop_mask]["log_dt"] - shifted_dt[stop_mask]
+
+        # Month aggregation
+        ret = df[stop_mask][["date", "log_dt"]]
+        ret["agg_time"] = agg_time
+        df_month = ret.set_index("log_dt").resample("M").sum().reset_index()
+        df_month["date"] = df_month["log_dt"].apply(
+            lambda x: str(x.date())[: len("2000-01")]
+        )
+
+        col_output_labels = {"agg_time": "Total time", "date": "Date"}
+
+        # df_month.index.name = "Date"
+        print("Aggregated by month:")
+        print("--------------------")
+        print(
+            df_month[["date", "agg_time"]]
+            .rename(columns=col_output_labels)
+            .to_string(index=False)
+        )
+
+        print("\n")
+
+        print("Aggregated by day:")
+        print("------------------")
+        print(
+            ret[["date", "agg_time"]]
+            .rename(columns=col_output_labels)
+            .to_string(index=False)
+        )
 
