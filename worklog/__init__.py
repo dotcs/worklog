@@ -32,7 +32,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
                 "task",
                 cli_args.type,
                 cli_args.offset_minutes,
-                None,
+                cli_args.time,
                 identifier=cli_args.id,
             )
         elif cli_args.type == "list":

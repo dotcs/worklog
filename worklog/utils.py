@@ -46,6 +46,20 @@ def _positive_int(value: str) -> int:
     return value_int
 
 
+def _add_timeshift_args(parser: argparse.ArgumentParser):
+    timeshift_grp = parser.add_mutually_exclusive_group()
+    timeshift_grp.add_argument(
+        "--offset-minutes",
+        type=float,
+        default=0,
+        help="Offset of the start/stop time in minutes. Positive values shift the timestamp into the future, negative values shift it into the past.",
+    )
+    timeshift_grp.add_argument(
+        "--time",
+        help="Exact point in time. Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO format string, such as '2020-08-05T08:15:00+02:00'. In the latter case the local timezone is used if no timezone is specified explicitly.",
+    )
+
+
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         "Worklog", description="Simple CLI tool to log work and projects."
@@ -58,17 +72,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     commit_parser.add_argument(
         "type", choices=["start", "stop"], help="Commits a new entry to the log.",
     )
-    timeshift_grp = commit_parser.add_mutually_exclusive_group()
-    timeshift_grp.add_argument(
-        "--offset-minutes",
-        type=float,
-        default=0,
-        help="Offset of the start/stop time in minutes. Positive values shift the timestamp into the future, negative values shift it into the past.",
-    )
-    timeshift_grp.add_argument(
-        "--time",
-        help="Exact point in time. Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO format string, such as '2020-08-05T08:15:00+02:00'. In the latter case the local timezone is used if no timezone is specified explicitly.",
-    )
+    _add_timeshift_args(commit_parser)
     commit_parser.add_argument(
         "-f",
         "--force",
@@ -85,12 +89,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     task_parser.add_argument(
         "--id", type=str, help="Task identifier",
     )
-    task_parser.add_argument(
-        "--offset-minutes",
-        type=float,
-        default=0,
-        help="Offset of the start/stop time in minutes",
-    )
+    _add_timeshift_args(task_parser)
 
     status_parser = subparsers.add_parser("status")
     status_parser.add_argument(
