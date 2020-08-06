@@ -9,9 +9,7 @@ process the logged information with other tools.
 You need to have Python >= 3.6 installed.
 
 ```bash
-# Install from PyPi Test-Servers as long as the version has not been published
-# to the official registry yet.
-pip install --extra-index-url https://test.pypi.org/simple/ dcs-worklog
+pip install dcs-worklog
 ```
 
 ### Command Line Interface (CLI)
@@ -111,15 +109,12 @@ pytest worklog/
 
 ### Create a release
 
-**Attention**: Currently the software is released to the PyPi-Test-Channel
-*only.
-
 To create a release, update the version number in setup.py first.
 Then execute the following commands:
 
 ```bash
 python setup.py sdist bdist_wheel
-twine upload -r testpypi dist/*
+twine upload --skip-existing -r pypi dist/*
 ```
 
 ## Planned features
@@ -144,5 +139,5 @@ If you are behind a proxy the installation might not work.
 In this case try to setup the proxy via the `--proxy` flag:
 
 ```bash
-pip install --proxy=http://localhost:3128 --extra-index-url https://test.pypi.org/simple/ dcs-worklog
+pip install --proxy=http://localhost:3128 dcs-worklog
 ```
