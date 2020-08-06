@@ -11,7 +11,7 @@ You need to have Python >= 3.6 installed.
 ```bash
 # Install from PyPi Test-Servers as long as the version has not been published
 # to the official registry yet.
-pip install --index-url https://test.pypi.org/simple/ dcs-worklog
+pip install --extra-index-url https://test.pypi.org/simple/ dcs-worklog
 ```
 
 ### Command Line Interface (CLI)
@@ -136,4 +136,13 @@ wl config get working_time.daily_hours
 wl config set working_time.daily_hours 8
 
 wl edit 2020-04-08
+```
+
+## Troubleshooting
+
+If you are behind a proxy the installation might not work.
+In this case try to setup the proxy via the `--proxy` flag:
+
+```bash
+pip install --proxy=http://localhost:3128 --extra-index-url https://test.pypi.org/simple/ dcs-worklog
 ```
