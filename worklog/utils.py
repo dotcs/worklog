@@ -52,11 +52,22 @@ def _add_timeshift_args(parser: argparse.ArgumentParser):
         "--offset-minutes",
         type=float,
         default=0,
-        help="Offset of the start/stop time in minutes. Positive values shift the timestamp into the future, negative values shift it into the past.",
+        help=(
+            "Offset of the start/stop time in minutes. "
+            "Positive values shift the timestamp into the future, negative "
+            "values shift it into the past."
+        ),
     )
     timeshift_grp.add_argument(
         "--time",
-        help="Exact point in time. Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO format string, such as '2020-08-05T08:15:00+02:00'. In the latter case the local timezone is used if no timezone is specified explicitly.",
+        help=(
+            "Exact point in time. "
+            "Can be a either hours and minutes (format: 'hh:mm') on the "
+            "same day or a full ISO format string, such as "
+            "'2020-08-05T08:15:00+02:00'. "
+            "In the latter case the local timezone is used if no timezone is "
+            "specified explicitly."
+        ),
     )
 
 
@@ -109,7 +120,10 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--number",
         type=_positive_int,
         default=10,
-        help="Defines many log entries should be shown. System pager will be used if n > 20.",
+        help=(
+            "Defines many log entries should be shown. "
+            "System pager will be used if n > 20."
+        ),
     )
     log_parser.add_argument(
         "-a",
