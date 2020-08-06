@@ -64,15 +64,16 @@ The format is CSV with pipe symbols (`|`) as delimiters.
 A working day is configured to have 8 hours.
 2 hours are set as a (soft) limit for overtime.
 
-This configuration can be changed by creating a config file in `~/.config/worklog/config` with the following content (or parts of it):
+This configuration can be changed by creating a config file in
+`~/.config/worklog/config`.
+Partial changes are allowed and are merged with the [default
+configuration](./worklog/config.cfg).
 
+An example customized configuration could be the following file:
 ```ini
-[worklog]
-path = ~/.worklog
-
 [workday]
-hours_target = 8
-hours_max = 10
+hours_target = 8.5
+hours_max = 12
 ```
 
 ### Integration in task bars
