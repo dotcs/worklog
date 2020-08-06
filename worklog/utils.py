@@ -64,7 +64,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--offset-minutes",
         type=float,
         default=0,
-        help="Offset of the start/stop time in minutes",
+        help="Offset of the start/stop time in minutes. Positive values shift the timestamp into the future, negative values shift it into the past.",
     )
     timeshift_grp.add_argument(
         "--time",
