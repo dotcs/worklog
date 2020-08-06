@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from io import StringIO
+from math import floor
 
 from worklog.utils import (
     LOCAL_TIMEZONE,
@@ -396,21 +397,35 @@ class Log(object):
         stop_mask = df["type"] == "stop"
         agg_time = df[stop_mask]["log_dt"] - shifted_dt[stop_mask]
 
-        # Month aggregation
+        def _time_repr(value: timedelta) -> str:
+            hours = floor(value.total_seconds() / 3600)
+            minutes = floor((value.total_seconds() - hours * 3600) / 60)
+            seconds = floor(value.total_seconds() % 60)
+            return ":".join((str(hours), str(minutes), str(seconds)))
+
         ret = df[stop_mask][["date", "log_dt"]]
         ret["agg_time"] = agg_time
-        df_month = ret.set_index("log_dt").resample("M").sum().reset_index()
+
+        # Month aggregation
+        df_month = ret.set_index("log_dt").resample("M").sum().reset_index().dropna()
         df_month["date"] = df_month["log_dt"].apply(
             lambda x: str(x.date())[: len("2000-01")]
         )
+        df_month["agg_time_custom"] = df_month["agg_time"].map(_time_repr)
 
-        col_output_labels = {"agg_time": "Total time", "date": "Date"}
+        # Day aggregation
+        df_day = ret.set_index("log_dt").resample("D").sum().reset_index().dropna()
+        df_day["date"] = df_day["log_dt"].apply(
+            lambda x: str(x.date())[: len("2000-01-01")]
+        )
+        df_day["agg_time_custom"] = df_day["agg_time"].map(_time_repr)
 
-        # df_month.index.name = "Date"
+        col_output_labels = {"agg_time_custom": "Total time", "date": "Date"}
+
         print("Aggregated by month:")
         print("--------------------")
         print(
-            df_month[["date", "agg_time"]]
+            df_month[["date", "agg_time_custom"]]
             .rename(columns=col_output_labels)
             .to_string(index=False)
         )
@@ -420,7 +435,7 @@ class Log(object):
         print("Aggregated by day:")
         print("------------------")
         print(
-            ret[["date", "agg_time"]]
+            df_day[["date", "agg_time_custom"]]
             .rename(columns=col_output_labels)
             .to_string(index=False)
         )
