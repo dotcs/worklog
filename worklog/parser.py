@@ -1,4 +1,15 @@
+from typing import List
+from datetime import datetime
+import re
 import argparse
+
+_help_time_arg = (
+    "Exact point in time. "
+    "Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO "
+    "format string, such as '2020-08-05T08:15:00+02:00'. "
+    "In the latter case the local timezone is used if no timezone is specified "
+    "explicitly."
+)
 
 
 def get_arg_parser() -> argparse.ArgumentParser:
@@ -74,7 +85,23 @@ def get_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    report_parser = subparsers.add_parser("report")
+    report_parser.add_argument(
+        "--month-from", required=True, type=_year_month_parser, help=""
+    )
+    report_parser.add_argument(
+        "--month-to", required=True, type=_year_month_parser, help=""
+    )
+
     return parser
+
+
+def _year_month_parser(value: str) -> datetime:
+    local_tz = datetime.utcnow().astimezone().tzinfo
+    if not re.match("\d{4}\-\d{2}", value):
+        raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM")
+    year, month = [int(x) for x in value.split("-")]
+    return datetime(year=year, month=month, day=1, tzinfo=local_tz)
 
 
 def _positive_int(value: str) -> int:
@@ -96,15 +123,5 @@ def _add_timeshift_args(parser: argparse.ArgumentParser):
             "values shift it into the past."
         ),
     )
-    timeshift_grp.add_argument(
-        "--time",
-        help=(
-            "Exact point in time. "
-            "Can be a either hours and minutes (format: 'hh:mm') on the "
-            "same day or a full ISO format string, such as "
-            "'2020-08-05T08:15:00+02:00'. "
-            "In the latter case the local timezone is used if no timezone is "
-            "specified explicitly."
-        ),
-    )
+    timeshift_grp.add_argument("--time", help=_help_time_arg)
 

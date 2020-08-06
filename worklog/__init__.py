@@ -63,6 +63,8 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
             log.log(cli_args.number, use_pager, categories)
         else:
             log.log(-1, use_pager, categories)
+    elif cli_args.subcmd == "report":
+        log.report(cli_args.month_from, cli_args.month_to)
 
 
 def run() -> None:

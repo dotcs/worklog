@@ -19,6 +19,7 @@ from worklog.utils import (
     get_active_task_ids,
     extract_intervals,
     get_pager,
+    get_or_update_dt,
 )
 
 logger = logging.getLogger("worklog")
@@ -46,7 +47,10 @@ class Log(object):
     _err_msg_empty_log_short = "N/A"
     _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_commit_active_tasks = "Fatal. Cannot stop, because tasks are still running. Stop running tasks first: {active_tasks:} or use --force flag.\n"
+    _err_msg_commit_active_tasks = (
+        "Fatal. Cannot stop, because tasks are still running. "
+        "Stop running tasks first: {active_tasks:} or use --force flag.\n"
+    )
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -56,6 +60,10 @@ class Log(object):
         self._read()
 
     def _read(self) -> None:
+        """
+        Read data from input file.
+        This method uses `pandas.read_csv` to parse the data.
+        """
         date_cols = get_datetime_cols_from_schema(self._schema)
         header = [col for col, _ in self._schema]
         try:
@@ -69,13 +77,20 @@ class Log(object):
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
-        self._log_df = self._transform_df(self._log_df)
+        self._log_df = pd.concat(
+            [self._log_df, self._extract_date_and_time(self._log_df)], axis=1
+        )
 
-    def _transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_copy = df.copy()
-        df_copy["date"] = df["log_dt"].apply(lambda x: x.date)
-        df_copy["time"] = df["log_dt"].apply(lambda x: x.time)
-        return df_copy
+    def _extract_date_and_time(
+        self, df: pd.DataFrame, source_col: str = "log_dt"
+    ) -> pd.DataFrame:
+        """
+        Extracts date and time information from a given pandas DataFrame.
+        By default the source column is `log_dt`.
+        """
+        date: pd.Series = df[source_col].apply(lambda x: x.date)
+        time: pd.Series = df[source_col].apply(lambda x: x.time)
+        return pd.DataFrame(dict(date=date, time=time),)
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
@@ -100,16 +115,7 @@ class Log(object):
         log_date = commit_date + timedelta(minutes=offset_min)
 
         if time is not None:
-            try:
-                h_time = datetime.strptime(time, "%H:%M")
-                hour, minute = h_time.hour, h_time.minute
-                log_date = log_date.replace(hour=hour, minute=minute, second=0)
-            except ValueError:
-                h_time = datetime.fromisoformat(time)
-                if h_time.tzinfo is None:
-                    # Set local timezone if not defined explicitly.
-                    h_time = h_time.replace(tzinfo=local_tz)
-                log_date = h_time
+            log_date = get_or_update_dt(log_date, time)
 
         # Test if there are running tasks
         if category == "session":
@@ -135,7 +141,7 @@ class Log(object):
         ]
 
         record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
-        record_t = self._transform_df(record)
+        record_t = pd.concat([record, self._extract_date_and_time(record)], axis=1)
 
         # append record to in-memory log
         self._log_df = pd.concat((self._log_df, record_t))
@@ -152,50 +158,65 @@ class Log(object):
         )
 
     def _is_active(self, df: pd.DataFrame):
+        """
+        Returns True if the last entry in a given pandas DataFrame has 
+        `type == 'start'`.
+
+        Note: This method does not check for anything else. If this should
+        just be applied to a single category, make sure to filter the pandas
+        DataFrame first.
+        """
         return df.iloc[-1]["type"] == "start" if df.shape[0] > 0 else False
 
-    def status(
-        self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
-    ) -> None:
+    def _check_nonempty_or_exit(self, fmt: Optional[str]):
+        """
+        Tests if the log file has at least a single value.
+        Exits with code 0 if no entry is available.
+        """
         if self._log_df.shape[0] == 0:
             if fmt is None:
                 sys.stderr.write(self._err_msg_empty_log)
-                sys.exit(1)
             else:
                 sys.stdout.write(self._err_msg_empty_log_short)
-            return
+            sys.exit(0)
 
+    def _filter_date_category_limit_cols(
+        self,
+        query_date: date,
+        filter_category: str = "session",
+        columns: List[str] = ["log_dt", "type"],
+    ):
+        """
+        Filters the worklog DataFrame by query date and category.
+        The returned DataFrame only includes the columns listed in the
+        `columns` parameter.
+        """
         # Extract the day of interest by selecting a subset of the log
         # dataframe that matches the queried day.
-        df_day = self._log_df[self._log_df.date == query_date]
-        df_day = df_day[df_day["category"] == "session"]
-        df_day = df_day[["log_dt", "type"]]
+        mask = (self._log_df.date == query_date) & (
+            self._log_df.category == filter_category
+        )
+        df = self._log_df[mask]
+        df = df[columns]
+        return df
 
-        if df_day.shape[0] == 0:
-            if fmt is None:
-                msg = self._err_msg_log_data_missing_for_date.format(
-                    query_date=query_date
-                )
-                sys.stderr.write(msg)
-            else:
-                sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
-            return
-
-        is_active = self._is_active(df_day)
-        logger.debug(f"Is active: {is_active}")
-
+    def _add_sentinel(self, query_date: date, df: pd.DataFrame):
+        is_active = self._is_active(df)
+        ret = df
         if is_active:
             sdt = sentinel_datetime(query_date)
             # attach another row with the current time
             sentinel_df = pd.DataFrame(
                 {"log_dt": pd.to_datetime(sdt.isoformat()), "type": "stop",}, index=[0],
             )
-            df_day = pd.concat((df_day, sentinel_df))
+            ret = pd.concat((ret, sentinel_df))
             logger.warning(f"Set sentinel stop value: {sdt}")
+        return ret
 
-        df_day["log_dt_s"] = df_day["log_dt"].shift(1)
-        df_day_stop = df_day[df_day["type"] == "stop"]
-        total_time = (df_day_stop["log_dt"] - df_day_stop["log_dt_s"]).sum()
+    def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
+        shifted_dt = df["log_dt"].shift(1)
+        stop_mask = df["type"] == "stop"
+        total_time = (df[stop_mask]["log_dt"] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
         hours_target_dt = timedelta(hours=hours_target)
@@ -221,45 +242,66 @@ class Log(object):
             ),
             0,
         )
+        return dict(
+            percentage=percentage,
+            end_of_work=end_time_str,
+            total_time=total_time_str,
+            remaining_time=remaining_time_str,
+            remaining_time_short=remaining_time_str[: len("00:00")],
+            percentage_remaining=percentage_remaining,
+            overtime=overtime_str,
+            overtime_short=overtime_str[: len("00:00")],
+            percentage_overtime=percentage_overtime,
+        )
+
+    def status(
+        self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
+    ) -> None:
+        self._check_nonempty_or_exit(fmt)
+
+        df_day = self._filter_date_category_limit_cols(query_date)
+
+        if df_day.shape[0] == 0:
+            if fmt is None:
+                msg = self._err_msg_log_data_missing_for_date.format(
+                    query_date=query_date
+                )
+                sys.stderr.write(msg)
+            else:
+                sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
+            return
+
+        is_active = self._is_active(df_day)
+        logger.debug(f"Is active: {is_active}")
+
+        df_day = self._add_sentinel(query_date, df_day)
+        facts = self._calc_facts(df_day, hours_target, hours_max)
 
         active_tasks = get_active_task_ids(self._log_df, query_date)
 
         lines = [
-            ("Status", "Tracking on" if is_active else "Tracking off"),
-            ("Total time", "{} ({:3}%)".format(total_time_str, percentage)),
-            (
-                "Remaining time",
-                "{} ({:3}%)".format(remaining_time_str, percentage_remaining),
-            ),
-            ("Overtime", "{} ({:3}%)".format(overtime_str, percentage_overtime),),
-            ("Active tasks", "[" + ", ".join(active_tasks) + "]",),
+            ("Status", "Tracking {status}"),
+            ("Total time", "{total_time} ({percentage:3}%)"),
+            ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
+            ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
+            ("Active tasks", "[{active_tasks}]",),
         ]
 
         if is_active and date == "today":
-            lines += [("End of work", end_time_str,)]
+            lines += [("End of work", facts["end_time_str"],)]
 
         key_max_len = max([len(line[0]) for line in lines])
         fmt_string = "{:" + str(key_max_len + 1) + "s}: {}"
 
-        val = "\n".join(fmt_string.format(*line) for line in lines)
+        stdout_fmt = "\n".join(fmt_string.format(*line) for line in lines) + "\n"
 
-        if fmt is None:
-            sys.stdout.write(val + "\n")
-        else:
-            sys.stdout.write(
-                fmt.format(
-                    status="on" if is_active else "off",
-                    percentage=percentage,
-                    end_of_work=end_time_str,
-                    total_time=total_time_str,
-                    remaining_time=remaining_time_str,
-                    remaining_time_short=remaining_time_str[: len("00:00")],
-                    percentage_remaining=percentage_remaining,
-                    overtime=overtime_str,
-                    overtime_short=overtime_str[: len("00:00")],
-                    percentage_overtime=percentage_overtime,
-                )
+        sys.stdout.write(
+            (stdout_fmt if fmt is None else fmt).format(
+                **facts,
+                status="on" if is_active else "off",
+                active_tasks=", ".join(active_tasks),
             )
+        )
 
     def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
         if self._log_df.shape[0] == 0:
@@ -302,7 +344,10 @@ class Log(object):
 
         if task_df.shape[0] == 0:
             sys.stderr.write(
-                f"Task ID {task_id} is unknown. See 'wl task list' to list all known tasks.\n"
+                (
+                    f"Task ID {task_id} is unknown. "
+                    "See 'wl task list' to list all known tasks.\n"
+                )
             )
             exit(1)
 
@@ -338,3 +383,45 @@ class Log(object):
         print(intervals_daily.to_string())
 
         print(f"---\nTotal: {intervals_detailed['Duration'].sum()}")
+
+    def report(self, month_from: datetime, month_to: datetime):
+        # month_to_excl = (month_to + timedelta(days=31)).replace(day=1)
+        time_mask = (self._log_df["log_dt"] >= month_from) & (
+            self._log_df["log_dt"] < month_to
+        )
+        session_mask = self._log_df["category"] == "session"
+        df = self._log_df[time_mask & session_mask]
+
+        shifted_dt = df["log_dt"].shift(1)
+        stop_mask = df["type"] == "stop"
+        agg_time = df[stop_mask]["log_dt"] - shifted_dt[stop_mask]
+
+        # Month aggregation
+        ret = df[stop_mask][["date", "log_dt"]]
+        ret["agg_time"] = agg_time
+        df_month = ret.set_index("log_dt").resample("M").sum().reset_index()
+        df_month["date"] = df_month["log_dt"].apply(
+            lambda x: str(x.date())[: len("2000-01")]
+        )
+
+        col_output_labels = {"agg_time": "Total time", "date": "Date"}
+
+        # df_month.index.name = "Date"
+        print("Aggregated by month:")
+        print("--------------------")
+        print(
+            df_month[["date", "agg_time"]]
+            .rename(columns=col_output_labels)
+            .to_string(index=False)
+        )
+
+        print("\n")
+
+        print("Aggregated by day:")
+        print("------------------")
+        print(
+            ret[["date", "agg_time"]]
+            .rename(columns=col_output_labels)
+            .to_string(index=False)
+        )
+

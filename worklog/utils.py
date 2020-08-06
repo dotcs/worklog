@@ -139,3 +139,18 @@ def get_pager() -> Optional[str]:
         default_pager = "less"
     pager = os.getenv("PAGER", default_pager)
     return pager
+
+
+def get_or_update_dt(dt: datetime, time: str):
+    local_tz = datetime.now(timezone.utc).astimezone().tzinfo
+    try:
+        h_time = datetime.strptime(time, "%H:%M")
+        hour, minute = h_time.hour, h_time.minute
+        return dt.replace(hour=hour, minute=minute, second=0)
+    except ValueError:
+        h_time = datetime.fromisoformat(time)
+        if h_time.tzinfo is None:
+            # Set local timezone if not defined explicitly.
+            h_time = h_time.replace(tzinfo=local_tz)
+        return h_time
+
