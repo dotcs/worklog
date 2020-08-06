@@ -4,7 +4,8 @@ from argparse import Namespace, ArgumentError
 from datetime import date, timedelta
 from io import StringIO
 
-from worklog.utils import configure_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
+from worklog.parser import get_arg_parser
+from worklog.utils import configure_logger, LOG_LEVELS, CONFIG_FILES
 from worklog.log import Log
 
 
