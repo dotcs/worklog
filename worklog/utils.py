@@ -6,6 +6,7 @@ import argparse
 import os
 from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
+import shutil
 
 LOG_FORMAT: str = logging.BASIC_FORMAT
 LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -215,3 +216,14 @@ def extract_intervals(
         log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
 
     return DataFrame(intervals)
+
+
+def get_pager() -> str:
+    # Windows comes pre-installed with the 'more' pager.
+    # See https://superuser.com/a/426229
+    # Unix distributions also have 'more' pre-installed.
+    default_pager = "more"
+    if shutil.which("less") is not None:
+        default_pager = "less"
+    pager = os.getenv("PAGER", default_pager)
+    return pager

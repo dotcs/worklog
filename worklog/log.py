@@ -1,7 +1,6 @@
 from typing import List, Tuple, Optional
 from datetime import datetime, date, timedelta, timezone
 import logging
-import os
 import sys
 import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
@@ -19,6 +18,7 @@ from worklog.utils import (
     sentinel_datetime,
     get_active_task_ids,
     extract_intervals,
+    get_pager,
 )
 
 logger = logging.getLogger("worklog")
@@ -279,7 +279,8 @@ class Log(object):
             fh = tempfile.NamedTemporaryFile(mode="w")
             fh.write(df.to_string(index=False))
             fh.flush()
-            pager = os.getenv("PAGER", "less")
+            pager = get_pager()
+            logger.debug(f"Set pager to {pager}")
             process = subprocess.Popen([pager, fh.name])
             process.wait()
             fh.close()
