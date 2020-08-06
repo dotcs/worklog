@@ -22,12 +22,6 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
                 cli_args.time,
                 force=cli_args.force,
             )
-        elif cli_args.type == "undo":
-            # entries = WorkLogEntries()
-            # entries.parse(worklog_fp)
-            # entries.undo()
-            # entries.persist(worklog_fp, mode='overwrite')
-            pass
     elif cli_args.subcmd == "task":
         if cli_args.type in ["start", "stop"]:
             if cli_args.id is None:
