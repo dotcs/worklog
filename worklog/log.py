@@ -401,7 +401,9 @@ class Log(object):
             hours = floor(value.total_seconds() / 3600)
             minutes = floor((value.total_seconds() - hours * 3600) / 60)
             seconds = floor(value.total_seconds() % 60)
-            return ":".join((str(hours), str(minutes), str(seconds)))
+            return "{hours:02}:{minutes:02}:{seconds:02}".format(
+                hours=hours, minutes=minutes, seconds=seconds
+            )
 
         ret = df[stop_mask][["date", "log_dt"]]
         ret["agg_time"] = agg_time
