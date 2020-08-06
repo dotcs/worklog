@@ -218,11 +218,11 @@ def extract_intervals(
     return DataFrame(intervals)
 
 
-def get_pager() -> str:
+def get_pager() -> Optional[str]:
     # Windows comes pre-installed with the 'more' pager.
     # See https://superuser.com/a/426229
     # Unix distributions also have 'more' pre-installed.
-    default_pager = "more"
+    default_pager = shutil.which("more")
     if shutil.which("less") is not None:
         default_pager = "less"
     pager = os.getenv("PAGER", default_pager)

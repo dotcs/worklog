@@ -276,14 +276,17 @@ class Log(object):
         if not use_pager:
             sys.stdout.write(df.to_string(index=False) + "\n")
         else:
-            fh = tempfile.NamedTemporaryFile(mode="w")
-            fh.write(df.to_string(index=False))
-            fh.flush()
-            pager = get_pager()
-            logger.debug(f"Set pager to {pager}")
-            process = subprocess.Popen([pager, fh.name])
-            process.wait()
-            fh.close()
+            with tempfile.NamedTemporaryFile(mode="w") as fh:
+                logger.debug(f"Write content to temporary file: {fh.name}")
+                fh.write(df.to_string(index=False))
+                fh.flush()
+                pager = get_pager()
+                if pager is None:
+                    sys.stdout.write(df.to_string(index=False) + "\n")
+                else:
+                    logger.debug(f"Set pager to {pager}")
+                    process = subprocess.Popen([pager, fh.name])
+                    process.wait()
 
     def list_tasks(self):
         task_df = self._log_df[self._log_df["category"] == "task"]
