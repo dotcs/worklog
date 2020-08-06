@@ -19,6 +19,7 @@ from worklog.utils import (
     get_active_task_ids,
     extract_intervals,
     get_pager,
+    get_or_update_dt,
 )
 
 logger = logging.getLogger("worklog")
@@ -46,7 +47,10 @@ class Log(object):
     _err_msg_empty_log_short = "N/A"
     _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_commit_active_tasks = "Fatal. Cannot stop, because tasks are still running. Stop running tasks first: {active_tasks:} or use --force flag.\n"
+    _err_msg_commit_active_tasks = (
+        "Fatal. Cannot stop, because tasks are still running. "
+        "Stop running tasks first: {active_tasks:} or use --force flag.\n"
+    )
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -100,16 +104,7 @@ class Log(object):
         log_date = commit_date + timedelta(minutes=offset_min)
 
         if time is not None:
-            try:
-                h_time = datetime.strptime(time, "%H:%M")
-                hour, minute = h_time.hour, h_time.minute
-                log_date = log_date.replace(hour=hour, minute=minute, second=0)
-            except ValueError:
-                h_time = datetime.fromisoformat(time)
-                if h_time.tzinfo is None:
-                    # Set local timezone if not defined explicitly.
-                    h_time = h_time.replace(tzinfo=local_tz)
-                log_date = h_time
+            log_date = get_or_update_dt(log_date, time)
 
         # Test if there are running tasks
         if category == "session":
@@ -302,7 +297,10 @@ class Log(object):
 
         if task_df.shape[0] == 0:
             sys.stderr.write(
-                f"Task ID {task_id} is unknown. See 'wl task list' to list all known tasks.\n"
+                (
+                    f"Task ID {task_id} is unknown. "
+                    "See 'wl task list' to list all known tasks.\n"
+                )
             )
             exit(1)
 
