@@ -336,3 +336,21 @@ class Log(object):
         print(intervals_daily.to_string())
 
         print(f"---\nTotal: {intervals_detailed['Duration'].sum()}")
+
+    def report(
+        self, time: Optional[str],
+    ):
+        raise NotImplementedError()  # TODO: Finish implementation
+
+        dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+        if time is not None:
+            dt = get_or_update_dt(dt, time)
+
+        sub_df = (
+            self._log_df.set_index("log_dt")
+            .loc[dt.isoformat()[: len("2000-01-01")]]
+            .reset_index()
+        )
+        sub_df_session = sub_df[sub_df.category == "session"]
+        print(sub_df_session)
+

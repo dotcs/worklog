@@ -1,5 +1,13 @@
 import argparse
 
+_help_time_arg = (
+    "Exact point in time. "
+    "Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO "
+    "format string, such as '2020-08-05T08:15:00+02:00'. "
+    "In the latter case the local timezone is used if no timezone is specified "
+    "explicitly."
+)
+
 
 def get_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -74,6 +82,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    report_parser = subparsers.add_parser("report")
+    report_parser.add_argument("--time", help=_help_time_arg)
+
     return parser
 
 
@@ -96,15 +107,5 @@ def _add_timeshift_args(parser: argparse.ArgumentParser):
             "values shift it into the past."
         ),
     )
-    timeshift_grp.add_argument(
-        "--time",
-        help=(
-            "Exact point in time. "
-            "Can be a either hours and minutes (format: 'hh:mm') on the "
-            "same day or a full ISO format string, such as "
-            "'2020-08-05T08:15:00+02:00'. "
-            "In the latter case the local timezone is used if no timezone is "
-            "specified explicitly."
-        ),
-    )
+    timeshift_grp.add_argument("--time", help=_help_time_arg)
 
