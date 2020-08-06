@@ -6,6 +6,7 @@ import argparse
 import os
 from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
+import shutil
 
 LOG_FORMAT: str = logging.BASIC_FORMAT
 LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -64,7 +65,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--offset-minutes",
         type=float,
         default=0,
-        help="Offset of the start/stop time in minutes",
+        help="Offset of the start/stop time in minutes. Positive values shift the timestamp into the future, negative values shift it into the past.",
     )
     timeshift_grp.add_argument(
         "--time",
@@ -118,6 +119,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--all",
         action="store_true",
         help="Show all entries. System pager will be used.",
+    )
+    log_parser.add_argument(
+        "--category", choices=["session", "task"], help="Filter category",
     )
 
     return parser
@@ -212,3 +216,14 @@ def extract_intervals(
         log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
 
     return DataFrame(intervals)
+
+
+def get_pager() -> str:
+    # Windows comes pre-installed with the 'more' pager.
+    # See https://superuser.com/a/426229
+    # Unix distributions also have 'more' pre-installed.
+    default_pager = "more"
+    if shutil.which("less") is not None:
+        default_pager = "less"
+    pager = os.getenv("PAGER", default_pager)
+    return pager
