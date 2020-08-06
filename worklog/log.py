@@ -96,12 +96,20 @@ class Log(object):
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
         commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+        local_tz = datetime.now(timezone.utc).astimezone().tzinfo
         log_date = commit_date + timedelta(minutes=offset_min)
 
         if time is not None:
-            h_time = datetime.strptime(time, "%H:%M")
-            hour, minute = h_time.hour, h_time.minute
-            log_date = log_date.replace(hour=hour, minute=minute, second=0)
+            try:
+                h_time = datetime.strptime(time, "%H:%M")
+                hour, minute = h_time.hour, h_time.minute
+                log_date = log_date.replace(hour=hour, minute=minute, second=0)
+            except ValueError:
+                h_time = datetime.fromisoformat(time)
+                if h_time.tzinfo is None:
+                    # Set local timezone if not defined explicitly.
+                    h_time = h_time.replace(tzinfo=local_tz)
+                log_date = h_time
 
         # Test if there are running tasks
         if category == "session":
@@ -115,7 +123,7 @@ class Log(object):
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
-                        self.commit("task", "stop", offset_min, task_id)
+                        self.commit("task", "stop", offset_min, time, task_id)
 
         cols = [col for col, _ in self._schema]
         values = [

@@ -66,7 +66,10 @@ def get_arg_parser() -> argparse.ArgumentParser:
         default=0,
         help="Offset of the start/stop time in minutes",
     )
-    timeshift_grp.add_argument("--time", help="Exact point in time")
+    timeshift_grp.add_argument(
+        "--time",
+        help="Exact point in time. Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO format string, such as '2020-08-05T08:15:00+02:00'. In the latter case the local timezone is used if no timezone is specified explicitly.",
+    )
     commit_parser.add_argument(
         "-f",
         "--force",
