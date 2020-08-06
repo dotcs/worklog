@@ -2,6 +2,7 @@ import os
 from configparser import ConfigParser
 from argparse import Namespace, ArgumentError
 from datetime import date, timedelta
+from io import StringIO
 
 from worklog.utils import configure_logger, get_arg_parser, LOG_LEVELS, CONFIG_FILES
 from worklog.log import Log
@@ -73,7 +74,8 @@ def run() -> None:
     parser = get_arg_parser()
 
     cli_args = parser.parse_args()
-    logger.setLevel(LOG_LEVELS[min(cli_args.verbosity, len(LOG_LEVELS) - 1)])
+    log_level = LOG_LEVELS[min(cli_args.verbosity, len(LOG_LEVELS) - 1)]
+    logger.setLevel(log_level)
 
     logger.debug(f"Parsed CLI arguments: {cli_args}")
     logger.debug(f"Path to config files: {CONFIG_FILES}")
@@ -84,6 +86,11 @@ def run() -> None:
 
     cfg = ConfigParser()
     cfg.read(CONFIG_FILES)
+
+    with StringIO() as ss:
+        cfg.write(ss)
+        ss.seek(0)
+        logger.debug(f"Config content:\n{ss.read()}\nEOF")
 
     worklog_fp = os.path.expanduser(cfg.get("worklog", "path"))
     log = Log(worklog_fp)
