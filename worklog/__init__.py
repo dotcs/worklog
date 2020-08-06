@@ -61,7 +61,7 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
         log.doctor()
     elif cli_args.subcmd == "log":
         n = cli_args.number
-        use_pager = cli_args.all or n > 20
+        use_pager = not cli_args.no_pager and (cli_args.all or n > 20)
         categories = cli_args.category
         if not cli_args.all:
             log.log(cli_args.number, use_pager, categories)
