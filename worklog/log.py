@@ -60,6 +60,10 @@ class Log(object):
         self._read()
 
     def _read(self) -> None:
+        """
+        Read data from input file.
+        This method uses `pandas.read_csv` to parse the data.
+        """
         date_cols = get_datetime_cols_from_schema(self._schema)
         header = [col for col, _ in self._schema]
         try:
@@ -73,13 +77,20 @@ class Log(object):
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
-        self._log_df = self._transform_df(self._log_df)
+        self._log_df = pd.concat(
+            [self._log_df, self._extract_date_and_time(self._log_df)], axis=1
+        )
 
-    def _transform_df(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_copy = df.copy()
-        df_copy["date"] = df["log_dt"].apply(lambda x: x.date)
-        df_copy["time"] = df["log_dt"].apply(lambda x: x.time)
-        return df_copy
+    def _extract_date_and_time(
+        self, df: pd.DataFrame, source_col: str = "log_dt"
+    ) -> pd.DataFrame:
+        """
+        Extracts date and time information from a given pandas DataFrame.
+        By default the source column is `log_dt`.
+        """
+        date = df[source_col].apply(lambda x: x.date)
+        time = df[source_col].apply(lambda x: x.time)
+        return pd.DataFrame(dict(date=date, time=time))
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
@@ -130,7 +141,7 @@ class Log(object):
         ]
 
         record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
-        record_t = self._transform_df(record)
+        record_t = pd.concat([record, self._extract_date_and_time(record)], axis=1)
 
         # append record to in-memory log
         self._log_df = pd.concat((self._log_df, record_t))
@@ -147,24 +158,47 @@ class Log(object):
         )
 
     def _is_active(self, df: pd.DataFrame):
+        """
+        Returns True if the last entry in a given pandas DataFrame has 
+        `type == 'start'`.
+
+        Note: This method does not check for anything else. If this should
+        just be applied to a single category, make sure to filter the pandas
+        DataFrame first.
+        """
         return df.iloc[-1]["type"] == "start" if df.shape[0] > 0 else False
 
     def _check_nonempty_or_exit(self, fmt: Optional[str]):
+        """
+        Tests if the log file has at least a single value.
+        Exits with code 0 if no entry is available.
+        """
         if self._log_df.shape[0] == 0:
             if fmt is None:
                 sys.stderr.write(self._err_msg_empty_log)
-                sys.exit(1)
             else:
                 sys.stdout.write(self._err_msg_empty_log_short)
-            return
+            sys.exit(0)
 
-    def _query_date(self, query_date: date):
+    def _filter_date_category_limit_cols(
+        self,
+        query_date: date,
+        filter_category: str = "session",
+        columns: List[str] = ["log_dt", "type"],
+    ):
+        """
+        Filters the worklog DataFrame by query date and category.
+        The returned DataFrame only includes the columns listed in the
+        `columns` parameter.
+        """
         # Extract the day of interest by selecting a subset of the log
         # dataframe that matches the queried day.
-        df_day = self._log_df[self._log_df.date == query_date]
-        df_day = df_day[df_day["category"] == "session"]
-        df_day = df_day[["log_dt", "type"]]
-        return df_day
+        mask = (self._log_df.date == query_date) & (
+            self._log_df.category == filter_category
+        )
+        df = self._log_df[mask]
+        df = df[columns]
+        return df
 
     def _add_sentinel(self, query_date: date, df: pd.DataFrame):
         is_active = self._is_active(df)
@@ -225,7 +259,7 @@ class Log(object):
     ) -> None:
         self._check_nonempty_or_exit(fmt)
 
-        df_day = self._query_date(query_date)
+        df_day = self._filter_date_category_limit_cols(query_date)
 
         if df_day.shape[0] == 0:
             if fmt is None:
