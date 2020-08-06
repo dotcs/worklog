@@ -119,6 +119,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show all entries. System pager will be used.",
     )
+    log_parser.add_argument(
+        "--category", choices=["session", "task"], help="Filter category",
+    )
 
     return parser
 

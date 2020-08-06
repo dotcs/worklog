@@ -261,7 +261,7 @@ class Log(object):
                 )
             )
 
-    def log(self, n: int, use_pager: bool) -> None:
+    def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
             return
@@ -269,6 +269,8 @@ class Log(object):
         fields = ["date", "time", "category", "type", "identifier"]
         df = self._log_df[fields].iloc[::-1]  # sort in reverse (latest first)
         df["identifier"] = df["identifier"].fillna("-")
+        if filter_category:
+            df = df[df["category"] == filter_category]
         if n > 0:
             df = df.head(n=n)
         if not use_pager:
