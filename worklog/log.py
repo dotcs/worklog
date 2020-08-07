@@ -385,17 +385,32 @@ class Log(object):
 
         print(f"---\nTotal: {intervals_detailed['Duration'].sum()}")
 
-    def report(self, month_from: datetime, month_to: datetime):
-        # month_to_excl = (month_to + timedelta(days=31)).replace(day=1)
-        time_mask = (self._log_df["log_dt"] >= month_from) & (
-            self._log_df["log_dt"] < month_to
-        )
-        session_mask = self._log_df["category"] == "session"
-        df = self._log_df[time_mask & session_mask]
-
+    def _aggregate_base(self, mask, keep_cols: List[str] = []):
+        df = self._log_df[mask]
         shifted_dt = df["log_dt"].shift(1)
         stop_mask = df["type"] == "stop"
         agg_time = df[stop_mask]["log_dt"] - shifted_dt[stop_mask]
+        ret = df[stop_mask][["log_dt"] + keep_cols]
+        ret["agg_time"] = agg_time
+        return ret
+
+    def _aggregate_time(self, mask, resample="D"):
+        df = self._aggregate_base(mask, keep_cols=["date"])
+        df_day = df.set_index("log_dt").resample(resample).sum().reset_index().dropna()
+        len_date = len("2000-01-01" if resample == "D" else "2000-01")
+        df_day["date"] = df_day["log_dt"].apply(lambda x: str(x.date())[:len_date])
+        return df_day
+
+    def _aggregate_tasks(self, mask):
+        df = self._aggregate_base(mask, keep_cols=["identifier"])
+        return df.set_index("log_dt").groupby("identifier").sum().reset_index()
+
+    def report(self, month_from: datetime, month_to: datetime):
+        session_mask = self._log_df["category"] == "session"
+        task_mask = self._log_df["category"] == "task"
+        time_mask = (self._log_df["log_dt"] >= month_from) & (
+            self._log_df["log_dt"] < month_to
+        )
 
         def _time_repr(value: timedelta) -> str:
             hours = floor(value.total_seconds() / 3600)
@@ -405,24 +420,22 @@ class Log(object):
                 hours=hours, minutes=minutes, seconds=seconds
             )
 
-        ret = df[stop_mask][["date", "log_dt"]]
-        ret["agg_time"] = agg_time
-
-        # Month aggregation
-        df_month = ret.set_index("log_dt").resample("M").sum().reset_index().dropna()
-        df_month["date"] = df_month["log_dt"].apply(
-            lambda x: str(x.date())[: len("2000-01")]
-        )
+        df_month = self._aggregate_time(time_mask & session_mask, resample="M")
         df_month["agg_time_custom"] = df_month["agg_time"].map(_time_repr)
 
         # Day aggregation
-        df_day = ret.set_index("log_dt").resample("D").sum().reset_index().dropna()
-        df_day["date"] = df_day["log_dt"].apply(
-            lambda x: str(x.date())[: len("2000-01-01")]
-        )
+        df_day = self._aggregate_time(time_mask & session_mask, resample="D")
         df_day["agg_time_custom"] = df_day["agg_time"].map(_time_repr)
 
-        col_output_labels = {"agg_time_custom": "Total time", "date": "Date"}
+        # Task aggregation
+        df_tasks = self._aggregate_tasks(time_mask & task_mask)
+        df_tasks["agg_time_custom"] = df_tasks["agg_time"].map(_time_repr)
+
+        col_output_labels = {
+            "agg_time_custom": "Total time",
+            "date": "Date",
+            "identifier": "Task name",
+        }
 
         print("Aggregated by month:")
         print("--------------------")
@@ -432,7 +445,7 @@ class Log(object):
             .to_string(index=False)
         )
 
-        print("\n")
+        print()
 
         print("Aggregated by day:")
         print("------------------")
@@ -442,3 +455,12 @@ class Log(object):
             .to_string(index=False)
         )
 
+        print()
+
+        print("Aggregated by tasks:")
+        print("--------------------")
+        print(
+            df_tasks[["identifier", "agg_time_custom"]]
+            .rename(columns=col_output_labels)
+            .to_string(index=False)
+        )
