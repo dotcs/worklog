@@ -431,18 +431,12 @@ class Log(object):
         df_tasks = self._aggregate_tasks(time_mask & task_mask)
         df_tasks["agg_time_custom"] = df_tasks["agg_time"].map(_time_repr)
 
-        col_output_labels = {
-            "agg_time_custom": "Total time",
-            "date": "Date",
-            "identifier": "Task name",
-        }
-
         print("Aggregated by month:")
         print("--------------------")
         print(
-            df_month[["date", "agg_time_custom"]]
-            .rename(columns=col_output_labels)
-            .to_string(index=False)
+            df_month[["date", "agg_time_custom"]].to_string(
+                index=False, header=["Date", "Total time"]
+            )
         )
 
         print()
@@ -450,9 +444,9 @@ class Log(object):
         print("Aggregated by day:")
         print("------------------")
         print(
-            df_day[["date", "agg_time_custom"]]
-            .rename(columns=col_output_labels)
-            .to_string(index=False)
+            df_day[["date", "agg_time_custom"]].to_string(
+                index=False, header=["Date", "Total time"]
+            )
         )
 
         print()
@@ -460,7 +454,8 @@ class Log(object):
         print("Aggregated by tasks:")
         print("--------------------")
         print(
-            df_tasks[["identifier", "agg_time_custom"]]
-            .rename(columns=col_output_labels)
-            .to_string(index=False)
+            df_tasks[["identifier", "agg_time_custom"]].to_string(
+                index=False, header=["Task name", "Total time"]
+            )
         )
+
