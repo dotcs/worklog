@@ -1,5 +1,5 @@
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import re
 import argparse
 
@@ -85,12 +85,30 @@ def get_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+    current_month: str = now.isoformat()[: len("2000-01")]
+    next_month: str = (now.replace(day=1) + timedelta(days=31)).isoformat()[
+        : len("2000-01")
+    ]
+
     report_parser = subparsers.add_parser("report")
     report_parser.add_argument(
-        "--month-from", required=True, type=_year_month_parser, help=""
+        "--month-from",
+        type=_year_month_parser,
+        default=current_month,
+        help=(
+            "Month from which the aggregation should be started (inclusive). "
+            "By default the current calendar month is selected."
+        ),
     )
     report_parser.add_argument(
-        "--month-to", required=True, type=_year_month_parser, help=""
+        "--month-to",
+        type=_year_month_parser,
+        default=next_month,
+        help=(
+            "Month to which the aggregation should be started (exclusive). "
+            "By default the next calendar month is selected."
+        ),
     )
 
     return parser
