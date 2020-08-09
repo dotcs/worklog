@@ -18,6 +18,7 @@ from worklog.utils import (
     check_order_session,
     sentinel_datetime,
     get_active_task_ids,
+    get_all_task_ids,
     extract_intervals,
     get_pager,
     get_or_update_dt,
@@ -278,6 +279,7 @@ class Log(object):
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
 
+        all_touched_tasks = get_all_task_ids(self._log_df, query_date)
         active_tasks = get_active_task_ids(self._log_df, query_date)
 
         lines = [
@@ -285,7 +287,8 @@ class Log(object):
             ("Total time", "{total_time} ({percentage:3}%)"),
             ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
             ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
-            ("Active tasks", "[{active_tasks}]",),
+            ("All touched tasks", "{all_touched_tasks}",),
+            ("Active tasks", "{active_tasks}",),
         ]
 
         if is_active and date == "today":
@@ -300,7 +303,10 @@ class Log(object):
             (stdout_fmt if fmt is None else fmt).format(
                 **facts,
                 status="on" if is_active else "off",
-                active_tasks=", ".join(active_tasks),
+                active_tasks=f"({len(active_tasks)}) [" + ", ".join(active_tasks) + "]",
+                all_touched_tasks=f"({len(all_touched_tasks)}) ["
+                + ", ".join(all_touched_tasks)
+                + "]",
             )
         )
 

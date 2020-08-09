@@ -85,6 +85,13 @@ def sentinel_datetime(
     )
 
 
+def get_all_task_ids(df: DataFrame, query_date: date):
+    df_day = df[df["date"] == query_date]
+    df_day = df_day[df_day.category == "task"]
+    df_day = df_day[["log_dt", "type", "identifier"]]
+    return sorted(df_day["identifier"].unique())
+
+
 def get_active_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
