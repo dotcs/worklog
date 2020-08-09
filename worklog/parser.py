@@ -44,10 +44,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
     _add_timeshift_args(task_parser)
 
     status_parser = subparsers.add_parser("status")
-    status_parser.add_argument(
+    status_time_grp = status_parser.add_mutually_exclusive_group()
+    status_time_grp.add_argument(
         "--yesterday",
         action="store_true",
         help="Returns the status of yesterday instead of today.",
+    )
+    status_time_grp.add_argument(
+        "--date", type=_year_month_day_parser, help=("Date in the form YYYY-MM-DD")
     )
     status_parser.add_argument(
         "--fmt", type=str, default=None, help="Use a custom formatted string"
@@ -120,6 +124,14 @@ def _year_month_parser(value: str) -> datetime:
         raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM")
     year, month = [int(x) for x in value.split("-")]
     return datetime(year=year, month=month, day=1, tzinfo=local_tz)
+
+
+def _year_month_day_parser(value: str) -> datetime:
+    local_tz = datetime.utcnow().astimezone().tzinfo
+    if not re.match("\d{4}\-\d{2}\-\d{2}", value):
+        raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM-DD")
+    year, month, day = [int(x) for x in value.split("-")]
+    return datetime(year=year, month=month, day=day, tzinfo=local_tz)
 
 
 def _positive_int(value: str) -> int:
