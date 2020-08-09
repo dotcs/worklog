@@ -51,6 +51,8 @@ def dispatch(log: Log, cli_args: Namespace, cfg: ConfigParser) -> None:
         query_date = date.today()
         if cli_args.yesterday:
             query_date -= timedelta(days=1)
+        elif cli_args.date:
+            query_date = cli_args.date.date()
         log.status(hours_target, hours_max, query_date=query_date, fmt=fmt)
     elif cli_args.subcmd == "doctor":
         log.doctor()
