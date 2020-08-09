@@ -118,22 +118,6 @@ python setup.py sdist bdist_wheel
 twine upload --skip-existing -r pypi dist/*
 ```
 
-## Planned features
-
-```bash
-wl report --today
-wl report --yesterday
-wl report --current-month
-wl report --last-month
-wl report --month 2020-04
-wl report --date 2020-04-08
-
-wl config get working_time.daily_hours
-wl config set working_time.daily_hours 8
-
-wl edit 2020-04-08
-```
-
 ## Troubleshooting
 
 If you are behind a proxy the installation might not work.
