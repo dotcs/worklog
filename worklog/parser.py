@@ -41,6 +41,14 @@ def get_arg_parser() -> argparse.ArgumentParser:
     task_parser.add_argument(
         "--id", type=str, help="Task identifier",
     )
+    task_parser.add_argument(
+        "--auto-close",
+        action="store_true",
+        help=(
+            "Auto closes open tasks. "
+            "This flag is only relevant if type is set to 'start'."
+        ),
+    )
     _add_timeshift_args(task_parser)
 
     status_parser = subparsers.add_parser("status")
