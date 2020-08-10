@@ -11,7 +11,6 @@ from io import StringIO
 from math import floor
 
 from worklog.utils import (
-    LOCAL_TIMEZONE,
     format_timedelta,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
@@ -21,7 +20,7 @@ from worklog.utils import (
     get_all_task_ids,
     extract_intervals,
     get_pager,
-    get_or_update_dt,
+    calc_log_time,
 )
 
 logger = logging.getLogger("worklog")
@@ -100,28 +99,22 @@ class Log(object):
             self._log_fp, mode=mode, sep=self._separator, index=False, header=False
         )
 
-    def commit(
+    def _commit(
         self,
         category: str,
         type_: str,
-        offset_min: int,
-        time: Optional[str],
+        log_dt: datetime,
         identifier: str = None,
         force: bool = False,
     ) -> None:
         if type_ not in ["start", "stop"]:
             raise ValueError(f'Type must be one of {", ".join(type_)}')
 
-        commit_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-        local_tz = datetime.now(timezone.utc).astimezone().tzinfo
-        log_date = commit_date + timedelta(minutes=offset_min)
-
-        if time is not None:
-            log_date = get_or_update_dt(log_date, time)
+        commit_dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
 
         # Test if there are running tasks
         if category == "session":
-            active_tasks = get_active_task_ids(self._log_df, log_date.date())
+            active_tasks = get_active_task_ids(self._log_df, log_dt.date())
             if len(active_tasks) > 0:
                 if not force:
                     msg = self._err_msg_commit_active_tasks.format(
@@ -131,12 +124,12 @@ class Log(object):
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
-                        self.commit("task", "stop", offset_min, time, task_id)
+                        self._commit("task", "stop", log_dt, task_id)
 
         cols = [col for col, _ in self._schema]
         values = [
-            pd.to_datetime(commit_date),
-            pd.to_datetime(log_date),
+            pd.to_datetime(commit_dt),
+            pd.to_datetime(log_dt),
             category,
             type_,
             identifier,
@@ -153,6 +146,18 @@ class Log(object):
         # Because we allow for time offsets sorting is not guaranteed at this point.
         # Update sorting of values in-memory.
         self._log_df = self._log_df.sort_values(by=["log_dt"])
+
+    def commit(
+        self,
+        category: str,
+        type_: str,
+        offset_min: int = 0,
+        time: Optional[str] = None,
+        identifier: str = None,
+        force: bool = False,
+    ) -> None:
+        log_date = calc_log_time(offset_min, time)
+        self._commit(category, type_, log_date, identifier, force)
 
     def doctor(self) -> None:
         self._log_df.groupby(["date"]).apply(
@@ -410,6 +415,12 @@ class Log(object):
     def _aggregate_tasks(self, mask):
         df = self._aggregate_base(mask, keep_cols=["identifier"])
         return df.set_index("log_dt").groupby("identifier").sum().reset_index()
+
+    def stop_active_tasks(self, log_dt: datetime):
+        query_date = log_dt.date()
+        active_task_ids = get_active_task_ids(self._log_df, query_date)
+        for task_id in active_task_ids:
+            self._commit("task", "stop", log_dt, identifier=task_id)
 
     def report(self, month_from: datetime, month_to: datetime):
         session_mask = self._log_df["category"] == "session"
