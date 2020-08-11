@@ -22,8 +22,21 @@ from worklog.utils import (
     get_pager,
     calc_log_time,
 )
+from worklog.constants import (
+    COL_CATEGORY,
+    COL_COMMIT_DATETIME,
+    COL_LOG_DATETIME,
+    COL_TASK_IDENTIFIER,
+    COL_TYPE,
+    DEFAULT_LOGGER_NAME,
+    LOCAL_TIMEZONE,
+    TOKEN_SESSION,
+    TOKEN_TASK,
+    TOKEN_START,
+    TOKEN_STOP,
+)
 
-logger = logging.getLogger("worklog")
+logger = logging.getLogger(DEFAULT_LOGGER_NAME)
 
 
 class Log(object):
@@ -34,11 +47,11 @@ class Log(object):
     _log_fp: Optional[str] = None
     _separator: Optional[str] = None
     _schema: List[Tuple[str, str]] = [
-        ("commit_dt", "datetime64[ns]",),
-        ("log_dt", "datetime64[ns]",),
-        ("category", "object",),
-        ("type", "object",),
-        ("identifier", "object",),
+        (COL_COMMIT_DATETIME, "datetime64[ns]",),
+        (COL_LOG_DATETIME, "datetime64[ns]",),
+        (COL_CATEGORY, "object",),
+        (COL_TYPE, "object",),
+        (COL_TASK_IDENTIFIER, "object",),
     ]
 
     # Error messages
@@ -74,7 +87,7 @@ class Log(object):
                 parse_dates=date_cols,
                 header=None,
                 names=header,
-            ).sort_values(by=["log_dt"])
+            ).sort_values(by=[COL_LOG_DATETIME])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
@@ -83,7 +96,7 @@ class Log(object):
         )
 
     def _extract_date_and_time(
-        self, df: pd.DataFrame, source_col: str = "log_dt"
+        self, df: pd.DataFrame, source_col: str = COL_LOG_DATETIME
     ) -> pd.DataFrame:
         """
         Extracts date and time information from a given pandas DataFrame.
@@ -107,13 +120,15 @@ class Log(object):
         identifier: str = None,
         force: bool = False,
     ) -> None:
-        if type_ not in ["start", "stop"]:
-            raise ValueError(f'Type must be one of {", ".join(type_)}')
+        if type_ not in [TOKEN_START, TOKEN_STOP]:
+            raise ValueError(
+                f'Type must be one of {", ".join([TOKEN_START, TOKEN_STOP])}'
+            )
 
         commit_dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
 
         # Test if there are running tasks
-        if category == "session":
+        if category == TOKEN_SESSION:
             active_tasks = get_active_task_ids(self._log_df, log_dt.date())
             if len(active_tasks) > 0:
                 if not force:
@@ -124,7 +139,7 @@ class Log(object):
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
-                        self._commit("task", "stop", log_dt, task_id)
+                        self._commit(TOKEN_TASK, TOKEN_STOP, log_dt, task_id)
 
         cols = [col for col, _ in self._schema]
         values = [
@@ -145,7 +160,7 @@ class Log(object):
 
         # Because we allow for time offsets sorting is not guaranteed at this point.
         # Update sorting of values in-memory.
-        self._log_df = self._log_df.sort_values(by=["log_dt"])
+        self._log_df = self._log_df.sort_values(by=[COL_LOG_DATETIME])
 
     def commit(
         self,
@@ -173,7 +188,7 @@ class Log(object):
         just be applied to a single category, make sure to filter the pandas
         DataFrame first.
         """
-        return df.iloc[-1]["type"] == "start" if df.shape[0] > 0 else False
+        return df.iloc[-1][COL_TYPE] == TOKEN_START if df.shape[0] > 0 else False
 
     def _check_nonempty_or_exit(self, fmt: Optional[str]):
         """
@@ -190,8 +205,8 @@ class Log(object):
     def _filter_date_category_limit_cols(
         self,
         query_date: date,
-        filter_category: str = "session",
-        columns: List[str] = ["log_dt", "type"],
+        filter_category: str = TOKEN_SESSION,
+        columns: List[str] = [COL_LOG_DATETIME, COL_TYPE],
     ):
         """
         Filters the worklog DataFrame by query date and category.
@@ -214,16 +229,20 @@ class Log(object):
             sdt = sentinel_datetime(query_date)
             # attach another row with the current time
             sentinel_df = pd.DataFrame(
-                {"log_dt": pd.to_datetime(sdt.isoformat()), "type": "stop",}, index=[0],
+                {
+                    COL_LOG_DATETIME: pd.to_datetime(sdt.isoformat()),
+                    COL_TYPE: TOKEN_STOP,
+                },
+                index=[0],
             )
             ret = pd.concat((ret, sentinel_df))
             logger.warning(f"Set sentinel stop value: {sdt}")
         return ret
 
     def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
-        shifted_dt = df["log_dt"].shift(1)
-        stop_mask = df["type"] == "stop"
-        total_time = (df[stop_mask]["log_dt"] - shifted_dt[stop_mask]).sum()
+        shifted_dt = df[COL_LOG_DATETIME].shift(1)
+        stop_mask = df[COL_TYPE] == TOKEN_STOP
+        total_time = (df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
         hours_target_dt = timedelta(hours=hours_target)
@@ -320,11 +339,11 @@ class Log(object):
             sys.stdout.write("No data available\n")
             return
 
-        fields = ["date", "time", "category", "type", "identifier"]
+        fields = ["date", "time", COL_CATEGORY, COL_TYPE, COL_TASK_IDENTIFIER]
         df = self._log_df[fields].iloc[::-1]  # sort in reverse (latest first)
-        df["identifier"] = df["identifier"].fillna("-")
+        df[COL_TASK_IDENTIFIER] = df[COL_TASK_IDENTIFIER].fillna("-")
         if filter_category:
-            df = df[df["category"] == filter_category]
+            df = df[df[COL_CATEGORY] == filter_category]
         if n > 0:
             df = df.head(n=n)
         if not use_pager:
@@ -343,14 +362,14 @@ class Log(object):
                     process.wait()
 
     def list_tasks(self):
-        task_df = self._log_df[self._log_df["category"] == "task"]
+        task_df = self._log_df[self._log_df[COL_CATEGORY] == TOKEN_TASK]
         sys.stdout.write("These tasks are listed in the log:\n")
-        for task_id in sorted(task_df["identifier"].unique()):
+        for task_id in sorted(task_df[COL_TASK_IDENTIFIER].unique()):
             sys.stdout.write(f"{task_id}\n")
 
     def task_report(self, task_id):
-        task_mask = self._log_df["category"] == "task"
-        task_id_mask = self._log_df["identifier"] == task_id
+        task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
+        task_id_mask = self._log_df[COL_TASK_IDENTIFIER] == task_id
         mask = task_mask & task_id_mask
         task_df = self._log_df[mask]
 
@@ -398,35 +417,48 @@ class Log(object):
 
     def _aggregate_base(self, mask, keep_cols: List[str] = []):
         df = self._log_df[mask]
-        shifted_dt = df["log_dt"].shift(1)
-        stop_mask = df["type"] == "stop"
-        agg_time = df[stop_mask]["log_dt"] - shifted_dt[stop_mask]
-        ret = df[stop_mask][["log_dt"] + keep_cols]
+        shifted_dt = df[COL_LOG_DATETIME].shift(1)
+        stop_mask = df[COL_TYPE] == TOKEN_STOP
+        agg_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
+        ret = df[stop_mask][[COL_LOG_DATETIME] + keep_cols]
         ret["agg_time"] = agg_time
         return ret
 
     def _aggregate_time(self, mask, resample="D"):
         df = self._aggregate_base(mask, keep_cols=["date"])
-        df_day = df.set_index("log_dt").resample(resample).sum().reset_index().dropna()
+        df_day = (
+            df.set_index(COL_LOG_DATETIME)
+            .resample(resample)
+            .sum()
+            .reset_index()
+            .dropna()
+        )
         len_date = len("2000-01-01" if resample == "D" else "2000-01")
-        df_day["date"] = df_day["log_dt"].apply(lambda x: str(x.date())[:len_date])
+        df_day["date"] = df_day[COL_LOG_DATETIME].apply(
+            lambda x: str(x.date())[:len_date]
+        )
         return df_day
 
     def _aggregate_tasks(self, mask):
-        df = self._aggregate_base(mask, keep_cols=["identifier"])
-        return df.set_index("log_dt").groupby("identifier").sum().reset_index()
+        df = self._aggregate_base(mask, keep_cols=[COL_TASK_IDENTIFIER])
+        return (
+            df.set_index(COL_LOG_DATETIME)
+            .groupby(COL_TASK_IDENTIFIER)
+            .sum()
+            .reset_index()
+        )
 
     def stop_active_tasks(self, log_dt: datetime):
         query_date = log_dt.date()
         active_task_ids = get_active_task_ids(self._log_df, query_date)
         for task_id in active_task_ids:
-            self._commit("task", "stop", log_dt, identifier=task_id)
+            self._commit(TOKEN_TASK, TOKEN_STOP, log_dt, identifier=task_id)
 
     def report(self, month_from: datetime, month_to: datetime):
-        session_mask = self._log_df["category"] == "session"
-        task_mask = self._log_df["category"] == "task"
-        time_mask = (self._log_df["log_dt"] >= month_from) & (
-            self._log_df["log_dt"] < month_to
+        session_mask = self._log_df[COL_CATEGORY] == TOKEN_SESSION
+        task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
+        time_mask = (self._log_df[COL_LOG_DATETIME] >= month_from) & (
+            self._log_df[COL_LOG_DATETIME] < month_to
         )
 
         def _time_repr(value: timedelta) -> str:
@@ -471,7 +503,7 @@ class Log(object):
         print("Aggregated by tasks:")
         print("--------------------")
         print(
-            df_tasks[["identifier", "agg_time_custom"]].to_string(
+            df_tasks[[COL_TASK_IDENTIFIER, "agg_time_custom"]].to_string(
                 index=False, header=["Task name", "Total time"]
             )
         )

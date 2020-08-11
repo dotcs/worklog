@@ -3,6 +3,19 @@ from datetime import datetime, timezone, timedelta
 import re
 import argparse
 
+from worklog.constants import (
+    SUBCMD_COMMIT,
+    SUBCMD_DOCTOR,
+    SUBCMD_LOG,
+    SUBCMD_REPORT,
+    SUBCMD_STATUS,
+    SUBCMD_TASK,
+    TOKEN_SESSION,
+    TOKEN_START,
+    TOKEN_STOP,
+    TOKEN_TASK,
+)
+
 _help_time_arg = (
     "Exact point in time. "
     "Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO "
@@ -20,9 +33,11 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="subcmd")
 
-    commit_parser = subparsers.add_parser("commit")
+    commit_parser = subparsers.add_parser(SUBCMD_COMMIT)
     commit_parser.add_argument(
-        "type", choices=["start", "stop"], help="Commits a new entry to the log.",
+        "type",
+        choices=[TOKEN_START, TOKEN_STOP],
+        help="Commits a new entry to the log.",
     )
     _add_timeshift_args(commit_parser)
     commit_parser.add_argument(
@@ -32,10 +47,10 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Force command, will auto-stop running tasks",
     )
 
-    task_parser = subparsers.add_parser("task")
+    task_parser = subparsers.add_parser(SUBCMD_TASK)
     task_parser.add_argument(
         "type",
-        choices=["start", "stop", "list", "report"],
+        choices=[TOKEN_START, TOKEN_STOP, "list", "report"],
         help="Starts/stops or list tasks",
     )
     task_parser.add_argument(
@@ -51,7 +66,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     _add_timeshift_args(task_parser)
 
-    status_parser = subparsers.add_parser("status")
+    status_parser = subparsers.add_parser(SUBCMD_STATUS)
     status_time_grp = status_parser.add_mutually_exclusive_group()
     status_time_grp.add_argument(
         "--yesterday",
@@ -65,9 +80,9 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--fmt", type=str, default=None, help="Use a custom formatted string"
     )
 
-    doctor_parser = subparsers.add_parser("doctor")
+    doctor_parser = subparsers.add_parser(SUBCMD_DOCTOR)
 
-    log_parser = subparsers.add_parser("log")
+    log_parser = subparsers.add_parser(SUBCMD_LOG)
     log_parser.add_argument(
         "-n",
         "--number",
@@ -85,7 +100,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Show all entries. System pager will be used.",
     )
     log_parser.add_argument(
-        "--category", choices=["session", "task"], help="Filter category",
+        "--category", choices=[TOKEN_SESSION, TOKEN_TASK], help="Filter category",
     )
     log_parser.add_argument(
         "--no-pager",
@@ -103,7 +118,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         : len("2000-01")
     ]
 
-    report_parser = subparsers.add_parser("report")
+    report_parser = subparsers.add_parser(SUBCMD_REPORT)
     report_parser.add_argument(
         "--month-from",
         type=_year_month_parser,

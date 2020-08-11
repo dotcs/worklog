@@ -8,19 +8,23 @@ from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
 import shutil
 
-LOG_FORMAT: str = logging.BASIC_FORMAT
-LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
-
-CONFIG_FILES: List[str] = [
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.cfg"),
-    os.path.expanduser("~/.config/worklog/config"),
-]
-
-LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinfo
+from worklog.constants import (
+    COL_CATEGORY,
+    COL_LOG_DATETIME,
+    COL_TASK_IDENTIFIER,
+    COL_TYPE,
+    DEFAULT_LOGGER_NAME,
+    LOCAL_TIMEZONE,
+    LOG_FORMAT,
+    TOKEN_SESSION,
+    TOKEN_TASK,
+    TOKEN_START,
+    TOKEN_STOP,
+)
 
 
 def configure_logger() -> logging.Logger:
-    logger = logging.getLogger("worklog")
+    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(LOG_FORMAT)
     handler.setFormatter(formatter)
@@ -58,17 +62,17 @@ def get_datetime_cols_from_schema(schema: Iterable[Tuple[str, str]]) -> List[str
 
 def check_order_session(df_group: DataFrame, logger: logging.Logger):
     last_type = None
-    for i, row in df_group.where(df_group["category"] == "session").iterrows():
-        if i == 0 and row["type"] != "start":
+    for i, row in df_group.where(df_group[COL_CATEGORY] == TOKEN_SESSION).iterrows():
+        if i == 0 and row[COL_TYPE] != TOKEN_START:
             logger.error(
-                f'First entry of type "session" on date {row.date} is not "start".'
+                f'First entry of type "{TOKEN_SESSION}" on date {row.date} is not "{TOKEN_START}".'
             )
-        if row["type"] == last_type:
+        if row[COL_TYPE] == last_type:
             logger.error(
-                f'"session" entries on date {row.date} are not ordered correctly.'
+                f'"{TOKEN_SESSION}" entries on date {row.date} are not ordered correctly.'
             )
-        last_type = row["type"]
-    if last_type != "stop":
+        last_type = row[COL_TYPE]
+    if last_type != TOKEN_STOP:
         logger.error(f"Date {row.date} has no stop entry.")
 
 
@@ -88,23 +92,25 @@ def sentinel_datetime(
 def get_all_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[["log_dt", "type", "identifier"]]
-    return sorted(df_day["identifier"].unique())
+    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]]
+    return sorted(df_day[COL_TASK_IDENTIFIER].unique())
 
 
 def get_active_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[["log_dt", "type", "identifier"]]
-    df_grouped = df_day.groupby("identifier").tail(1)
-    return sorted(df_grouped[df_grouped["type"] == "start"]["identifier"].unique())
+    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]]
+    df_grouped = df_day.groupby(COL_TASK_IDENTIFIER).tail(1)
+    return sorted(
+        df_grouped[df_grouped[COL_TYPE] == TOKEN_START][COL_TASK_IDENTIFIER].unique()
+    )
 
 
 def extract_intervals(
     df: DataFrame,
-    dt_col: str = "log_dt",
-    token_start: str = "start",
-    token_stop: str = "stop",
+    dt_col: str = COL_LOG_DATETIME,
+    TOKEN_START: str = TOKEN_START,
+    TOKEN_STOP: str = TOKEN_STOP,
     logger: Optional[logging.Logger] = None,
 ):
     def log_error(msg):
@@ -114,11 +120,11 @@ def extract_intervals(
     intervals = []
     last_start: Optional[datetime] = None
     for i, row in df.iterrows():
-        if row["type"] == "start":
+        if row[COL_TYPE] == TOKEN_START:
             if last_start is not None:
                 log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
             last_start = row[dt_col]
-        elif row["type"] == "stop":
+        elif row[COL_TYPE] == TOKEN_STOP:
             if last_start is None:
                 log_error("No start entry found. Skip entry.")
                 continue  # skip this entry
