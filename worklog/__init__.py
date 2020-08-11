@@ -15,14 +15,16 @@ from worklog.utils import (
     calc_log_time,
 )
 from worklog.constants import (
-    TOKEN_SESSION,
-    TOKEN_TASK,
     SUBCMD_COMMIT,
     SUBCMD_DOCTOR,
     SUBCMD_LOG,
     SUBCMD_REPORT,
     SUBCMD_STATUS,
     SUBCMD_TASK,
+    TOKEN_SESSION,
+    TOKEN_START,
+    TOKEN_STOP,
+    TOKEN_TASK,
 )
 
 
@@ -34,7 +36,7 @@ def dispatch(
     configuration values.
     """
     if cli_args.subcmd == SUBCMD_COMMIT:
-        if cli_args.type in ["start", "stop"]:
+        if cli_args.type in [TOKEN_START, TOKEN_STOP]:
             log.commit(
                 TOKEN_SESSION,
                 cli_args.type,
@@ -43,16 +45,16 @@ def dispatch(
                 force=cli_args.force,
             )
     elif cli_args.subcmd == SUBCMD_TASK:
-        if cli_args.auto_close == True and cli_args.type != "start":
+        if cli_args.auto_close == True and cli_args.type != TOKEN_START:
             raise parser.error(
-                '--auto-close is only allowed if the type is set to "start"',
+                f'--auto-close is only allowed if the type is set to "{TOKEN_START}"',
             )
-        if cli_args.type in ["start", "stop"]:
+        if cli_args.type in [TOKEN_START, TOKEN_STOP]:
             if cli_args.id is None:
                 raise parser.error(
                     "--id is required when a new task is started/stopped"
                 )
-            if cli_args.type == "start" and cli_args.auto_close:
+            if cli_args.type == TOKEN_START and cli_args.auto_close:
                 commit_dt = calc_log_time(cli_args.offset_minutes, cli_args.time)
                 log.stop_active_tasks(commit_dt)
             log.commit(
