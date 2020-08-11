@@ -8,19 +8,17 @@ from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
 import shutil
 
-LOG_FORMAT: str = logging.BASIC_FORMAT
-LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
-
-CONFIG_FILES: List[str] = [
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), "config.cfg"),
-    os.path.expanduser("~/.config/worklog/config"),
-]
-
-LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinfo
+from worklog.constants import (
+    CATEGORY_SESSION,
+    CATEGORY_TASK,
+    DEFAULT_LOGGER_NAME,
+    LOCAL_TIMEZONE,
+    LOG_FORMAT,
+)
 
 
 def configure_logger() -> logging.Logger:
-    logger = logging.getLogger("worklog")
+    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(LOG_FORMAT)
     handler.setFormatter(formatter)
@@ -58,14 +56,14 @@ def get_datetime_cols_from_schema(schema: Iterable[Tuple[str, str]]) -> List[str
 
 def check_order_session(df_group: DataFrame, logger: logging.Logger):
     last_type = None
-    for i, row in df_group.where(df_group["category"] == "session").iterrows():
+    for i, row in df_group.where(df_group["category"] == CATEGORY_SESSION).iterrows():
         if i == 0 and row["type"] != "start":
             logger.error(
-                f'First entry of type "session" on date {row.date} is not "start".'
+                f'First entry of type "{CATEGORY_SESSION}" on date {row.date} is not "start".'
             )
         if row["type"] == last_type:
             logger.error(
-                f'"session" entries on date {row.date} are not ordered correctly.'
+                f'"{CATEGORY_SESSION}" entries on date {row.date} are not ordered correctly.'
             )
         last_type = row["type"]
     if last_type != "stop":

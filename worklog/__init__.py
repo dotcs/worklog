@@ -4,14 +4,16 @@ from argparse import ArgumentParser, Namespace
 from datetime import date, timedelta
 from io import StringIO
 
+from worklog.constants import (
+    LOG_LEVELS,
+    CONFIG_FILES,
+)
+from worklog.log import Log
 from worklog.parser import get_arg_parser
 from worklog.utils import (
     configure_logger,
-    LOG_LEVELS,
-    CONFIG_FILES,
     calc_log_time,
 )
-from worklog.log import Log
 
 
 def dispatch(

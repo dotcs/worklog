@@ -22,8 +22,9 @@ from worklog.utils import (
     get_pager,
     calc_log_time,
 )
+from worklog.constants import LOCAL_TIMEZONE, DEFAULT_LOGGER_NAME
 
-logger = logging.getLogger("worklog")
+logger = logging.getLogger(DEFAULT_LOGGER_NAME)
 
 
 class Log(object):
