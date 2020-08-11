@@ -110,7 +110,10 @@ pytest worklog/
 
 ### Create a release
 
-To create a release, update the version number in setup.py first.
+**Attention**: This should not be needed. Releases are auto-generated from the
+*GitHub CI. See the [configuration file](./.github/workflows/package.yaml).
+
+To create a release use [git flow](), update the version number in setup.py first.
 Then execute the following commands:
 
 ```bash
