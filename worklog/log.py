@@ -121,7 +121,9 @@ class Log(object):
         force: bool = False,
     ) -> None:
         if type_ not in [TOKEN_START, TOKEN_STOP]:
-            raise ValueError(f'Type must be one of {", ".join(type_)}')
+            raise ValueError(
+                f'Type must be one of {", ".join([TOKEN_START, TOKEN_STOP])}'
+            )
 
         commit_dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
 
