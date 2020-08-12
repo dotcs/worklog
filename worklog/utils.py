@@ -7,6 +7,7 @@ import os
 from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
 import shutil
+from math import floor
 
 from worklog.constants import (
     COL_CATEGORY,
@@ -179,3 +180,12 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
         my_date = _get_or_update_dt(my_date, time)
 
     return my_date
+
+
+def format_timedelta(value: timedelta) -> str:
+    hours = floor(value.total_seconds() / 3600)
+    minutes = floor((value.total_seconds() - hours * 3600) / 60)
+    seconds = floor(value.total_seconds() % 60)
+    return "{hours:02}:{minutes:02}:{seconds:02}".format(
+        hours=hours, minutes=minutes, seconds=seconds
+    )

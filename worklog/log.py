@@ -11,6 +11,7 @@ from typing import List, Optional, Tuple
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
+from worklog.breaks import calc_break_duration
 from worklog.constants import (
     COL_CATEGORY,
     COL_COMMIT_DATETIME,
@@ -35,6 +36,7 @@ from worklog.utils import (
     get_datetime_cols_from_schema,
     get_pager,
     sentinel_datetime,
+    format_timedelta,
 )
 
 logger = logging.getLogger(DEFAULT_LOGGER_NAME)
@@ -124,59 +126,43 @@ class Log(object):
                     process = subprocess.Popen([pager, fh.name])
                     process.wait()
 
-    def report(self, month_from: datetime, month_to: datetime):
+    def report(self, month_from: datetime, month_to: datetime, break_cfg=None):
         session_mask = self._log_df[COL_CATEGORY] == TOKEN_SESSION
         task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
         time_mask = (self._log_df[COL_LOG_DATETIME] >= month_from) & (
             self._log_df[COL_LOG_DATETIME] < month_to
         )
 
-        def _time_repr(value: timedelta) -> str:
-            hours = floor(value.total_seconds() / 3600)
-            minutes = floor((value.total_seconds() - hours * 3600) / 60)
-            seconds = floor(value.total_seconds() % 60)
-            return "{hours:02}:{minutes:02}:{seconds:02}".format(
-                hours=hours, minutes=minutes, seconds=seconds
-            )
-
-        df_month = self._aggregate_time(time_mask & session_mask, resample="M")
-        df_month["agg_time_custom"] = df_month["agg_time"].map(_time_repr)
-
         # Day aggregation
         df_day = self._aggregate_time(time_mask & session_mask, resample="D")
-        df_day["agg_time_custom"] = df_day["agg_time"].map(_time_repr)
+        df_day["break"] = df_day["agg_time"].map(
+            lambda td: calc_break_duration(
+                td, break_cfg["limits"], break_cfg["durations"]
+            )
+        )
+
+        # Month aggregration
+        df_month = df_day.set_index(COL_LOG_DATETIME).resample("M").sum().reset_index()
+
+        self._post_aggregation(df_day)
+        self._post_aggregation(df_month, resample="M")
 
         # Task aggregation
         df_tasks = self._aggregate_tasks(time_mask & task_mask)
-        df_tasks["agg_time_custom"] = df_tasks["agg_time"].map(_time_repr)
+        df_tasks["agg_time_custom"] = df_tasks["agg_time"].map(format_timedelta)
 
-        print("Aggregated by month:")
-        print("--------------------")
-        print(
-            df_month[["date", "agg_time_custom"]].to_string(
-                index=False, header=["Date", "Total time"]
-            )
-        )
+        print_cols = ["date", "agg_time_custom"]
+        print_cols_labels = ["Date", "Total time"]
+        if break_cfg["active"]:
+            print_cols += ["break", "agg_time_minus_break_custom"]
+            print_cols_labels += ["Break", "Total time - break"]
 
-        print()
+        self._print_aggregation("month", df_month, print_cols, print_cols_labels)
+        self._print_aggregation("day", df_day, print_cols, print_cols_labels)
 
-        print("Aggregated by day:")
-        print("------------------")
-        print(
-            df_day[["date", "agg_time_custom"]].to_string(
-                index=False, header=["Date", "Total time"]
-            )
-        )
-
-        print()
-
-        print("Aggregated by tasks:")
-        print("--------------------")
-        print(
-            df_tasks[[COL_TASK_IDENTIFIER, "agg_time_custom"]].to_string(
-                index=False, header=["Task name", "Total time"]
-            )
-        )
+        print_cols = [COL_TASK_IDENTIFIER, "agg_time_custom"]
+        print_cols_labels = ["Task name", "Total time"]
+        self._print_aggregation("tasks", df_tasks, print_cols, print_cols_labels)
 
     def status(
         self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
@@ -494,11 +480,15 @@ class Log(object):
             .reset_index()
             .dropna()
         )
-        len_date = len("2000-01-01" if resample == "D" else "2000-01")
-        df_day["date"] = df_day[COL_LOG_DATETIME].apply(
-            lambda x: str(x.date())[:len_date]
-        )
         return df_day
+
+    def _post_aggregation(self, df, resample="D"):
+        len_date = len("2000-01-01" if resample == "D" else "2000-01")
+        df["date"] = df[COL_LOG_DATETIME].apply(lambda x: str(x.date())[:len_date])
+        df["agg_time_minus_break_custom"] = (df["agg_time"] - df["break"]).map(
+            format_timedelta
+        )
+        df["agg_time_custom"] = df["agg_time"].map(format_timedelta)
 
     def _aggregate_tasks(self, mask):
         df = self._aggregate_base(mask, keep_cols=[COL_TASK_IDENTIFIER])
@@ -508,3 +498,11 @@ class Log(object):
             .sum()
             .reset_index()
         )
+
+    def _print_aggregation(self, agg_label, df, cols, col_titles):
+        headline = f"Aggregated by {agg_label}:"
+        print(f"Aggregated by :")
+        print("-" * len(headline))
+        print(df[cols].to_string(index=False, header=col_titles,))
+
+        print()
