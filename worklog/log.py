@@ -36,7 +36,7 @@ from worklog.utils import (
     get_datetime_cols_from_schema,
     get_pager,
     sentinel_datetime,
-    format_timedelta,
+    format_numpy_timedelta,
 )
 
 logger = logging.getLogger(DEFAULT_LOGGER_NAME)
@@ -140,27 +140,41 @@ class Log(object):
                 td, break_cfg["limits"], break_cfg["durations"]
             )
         )
-
         # Month aggregration
         df_month = df_day.set_index(COL_LOG_DATETIME).resample("M").sum().reset_index()
 
-        self._post_aggregation(df_day)
-        self._post_aggregation(df_month, resample="M")
+        for df in (df_day, df_month):
+            df["agg_time_bookable"] = df["agg_time"] - df["break"]
 
         # Task aggregation
         df_tasks = self._aggregate_tasks(time_mask & task_mask)
-        df_tasks["agg_time_custom"] = df_tasks["agg_time"].map(format_timedelta)
 
-        print_cols = ["date", "agg_time_custom"]
+        print_cols = [COL_LOG_DATETIME, "agg_time"]
         print_cols_labels = ["Date", "Total time"]
         if break_cfg["active"]:
-            print_cols += ["break", "agg_time_minus_break_custom"]
-            print_cols_labels += ["Break", "Total time - break"]
+            print_cols += ["break", "agg_time_bookable"]
+            print_cols_labels += ["Break", "Bookable time"]
 
-        self._print_aggregation("month", df_month, print_cols, print_cols_labels)
-        self._print_aggregation("day", df_day, print_cols, print_cols_labels)
+        def _formatters(date: str = "M"):
+            date_max_len = len("2000-01") if date == "M" else len("2000-01-01")
+            return {
+                COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
+                "agg_time": format_numpy_timedelta,
+                "agg_time_bookable": format_numpy_timedelta,
+            }
 
-        print_cols = [COL_TASK_IDENTIFIER, "agg_time_custom"]
+        self._print_aggregation(
+            "month",
+            df_month,
+            print_cols,
+            print_cols_labels,
+            formatters=_formatters("M"),
+        )
+        self._print_aggregation(
+            "day", df_day, print_cols, print_cols_labels, formatters=_formatters("D")
+        )
+
+        print_cols = [COL_TASK_IDENTIFIER, "agg_time"]
         print_cols_labels = ["Task name", "Total time"]
         self._print_aggregation("tasks", df_tasks, print_cols, print_cols_labels)
 
@@ -482,14 +496,6 @@ class Log(object):
         )
         return df_day
 
-    def _post_aggregation(self, df, resample="D"):
-        len_date = len("2000-01-01" if resample == "D" else "2000-01")
-        df["date"] = df[COL_LOG_DATETIME].apply(lambda x: str(x.date())[:len_date])
-        df["agg_time_minus_break_custom"] = (df["agg_time"] - df["break"]).map(
-            format_timedelta
-        )
-        df["agg_time_custom"] = df["agg_time"].map(format_timedelta)
-
     def _aggregate_tasks(self, mask):
         df = self._aggregate_base(mask, keep_cols=[COL_TASK_IDENTIFIER])
         return (
@@ -499,10 +505,18 @@ class Log(object):
             .reset_index()
         )
 
-    def _print_aggregation(self, agg_label, df, cols, col_titles):
+    def _print_aggregation(self, agg_label, df, cols, col_titles, formatters=None):
         headline = f"Aggregated by {agg_label}:"
-        print(f"Aggregated by :")
+        print(headline)
         print("-" * len(headline))
-        print(df[cols].to_string(index=False, header=col_titles,))
+        print(
+            df.to_string(
+                index=False,
+                columns=cols,
+                header=col_titles,
+                formatters=formatters,
+                col_space=20,
+            )
+        )
 
         print()

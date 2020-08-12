@@ -1,4 +1,4 @@
-from typing import List, Iterable, Tuple, Dict, Optional
+from typing import List, Iterable, Tuple, Dict, Optional, Union
 from pandas import DataFrame, Series  # type: ignore
 import logging
 import sys
@@ -8,6 +8,7 @@ from functools import reduce
 from datetime import datetime, date, timezone, timedelta, tzinfo
 import shutil
 from math import floor
+import numpy as np
 
 from worklog.constants import (
     COL_CATEGORY,
@@ -182,10 +183,11 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
     return my_date
 
 
-def format_timedelta(value: timedelta) -> str:
-    hours = floor(value.total_seconds() / 3600)
-    minutes = floor((value.total_seconds() - hours * 3600) / 60)
-    seconds = floor(value.total_seconds() % 60)
+def format_numpy_timedelta(value: np.timedelta64) -> str:
+    seconds = value / np.timedelta64(1, "s")
+    hours = floor(seconds / 3600)
+    minutes = floor((seconds - hours * 3600) / 60)
+    seconds = floor(seconds % 60)
     return "{hours:02}:{minutes:02}:{seconds:02}".format(
         hours=hours, minutes=minutes, seconds=seconds
     )
