@@ -85,21 +85,26 @@ class Log(object):
         identifier: str = None,
         force: bool = False,
     ) -> None:
+        """Commit a session/task change to the logfile."""
         log_date = calc_log_time(offset_min, time)
         self._commit(category, type_, log_date, identifier, force)
 
     def doctor(self) -> None:
+        """Test if the logfile is consistent."""
         self._log_df.groupby(["date"]).apply(
             lambda group: check_order_session(group, logger)
         )
 
     def list_tasks(self):
+        """List all known tasks, i.e. tasks that have been used previously
+        and are stored in the logfile."""
         task_df = self._log_df[self._log_df[COL_CATEGORY] == TOKEN_TASK]
         sys.stdout.write("These tasks are listed in the log:\n")
         for task_id in sorted(task_df[COL_TASK_IDENTIFIER].unique()):
             sys.stdout.write(f"{task_id}\n")
 
     def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
+        """Display the content of the logfile."""
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
             return
@@ -127,6 +132,8 @@ class Log(object):
                     process.wait()
 
     def report(self, month_from: datetime, month_to: datetime, break_cfg=None):
+        """Generate a daily, weekly, monthly and task based report based on
+        the content in the logfile."""
         session_mask = self._log_df[COL_CATEGORY] == TOKEN_SESSION
         task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
         time_mask = (self._log_df[COL_LOG_DATETIME] >= month_from) & (
@@ -188,6 +195,8 @@ class Log(object):
     def status(
         self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
     ) -> None:
+        """Display the current working status, e.g. total time worked at this
+        day, remaining time, etc."""
         self._check_nonempty_or_exit(fmt)
 
         df_day = self._filter_date_category_limit_cols(query_date)
@@ -240,12 +249,14 @@ class Log(object):
         )
 
     def stop_active_tasks(self, log_dt: datetime):
+        """Stop all active tasks by commiting changes to the logfile."""
         query_date = log_dt.date()
         active_task_ids = get_active_task_ids(self._log_df, query_date)
         for task_id in active_task_ids:
             self._commit(TOKEN_TASK, TOKEN_STOP, log_dt, identifier=task_id)
 
     def task_report(self, task_id):
+        """Generate a report of a given task."""
         task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
         task_id_mask = self._log_df[COL_TASK_IDENTIFIER] == task_id
         mask = task_mask & task_id_mask
