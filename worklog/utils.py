@@ -185,9 +185,12 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
 
 def format_numpy_timedelta(value: np.timedelta64) -> str:
     seconds = value / np.timedelta64(1, "s")
-    hours = floor(seconds / 3600)
-    minutes = floor((seconds - hours * 3600) / 60)
-    seconds = floor(seconds % 60)
+    if np.isnan(seconds):
+        hours = minutes = seconds = 0
+    else:
+        hours = floor(seconds / 3600)
+        minutes = floor((seconds - hours * 3600) / 60)
+        seconds = floor(seconds % 60)
     return "{hours:02}:{minutes:02}:{seconds:02}".format(
         hours=hours, minutes=minutes, seconds=seconds
     )

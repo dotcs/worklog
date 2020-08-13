@@ -140,10 +140,14 @@ class Log(object):
                 td, break_cfg["limits"], break_cfg["durations"]
             )
         )
+
+        # Week aggregation
+        df_week = df_day.set_index(COL_LOG_DATETIME).resample("W").sum().reset_index()
+
         # Month aggregration
         df_month = df_day.set_index(COL_LOG_DATETIME).resample("M").sum().reset_index()
 
-        for df in (df_day, df_month):
+        for df in (df_day, df_week, df_month):
             df["agg_time_bookable"] = df["agg_time"] - df["break"]
 
         # Task aggregation
@@ -169,6 +173,9 @@ class Log(object):
             print_cols,
             print_cols_labels,
             formatters=_formatters("M"),
+        )
+        self._print_aggregation(
+            "week", df_week, print_cols, print_cols_labels, formatters=_formatters("D"),
         )
         self._print_aggregation(
             "day", df_day, print_cols, print_cols_labels, formatters=_formatters("D")
