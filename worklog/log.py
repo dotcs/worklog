@@ -193,7 +193,12 @@ class Log(object):
         self._print_aggregation("tasks", df_tasks, print_cols, print_cols_labels)
 
     def status(
-        self, hours_target: float, hours_max: float, query_date: date, fmt: str = None
+        self,
+        hours_target: float,
+        hours_max: float,
+        break_cfg,
+        query_date: date,
+        fmt: str = None,
     ) -> None:
         """Display the current working status, e.g. total time worked at this
         day, remaining time, etc."""
@@ -215,7 +220,7 @@ class Log(object):
         logger.debug(f"Is active: {is_active}")
 
         df_day = self._add_sentinel(query_date, df_day)
-        facts = self._calc_facts(df_day, hours_target, hours_max)
+        facts = self._calc_facts(df_day, hours_target, hours_max, break_cfg)
 
         all_touched_tasks = get_all_task_ids(self._log_df, query_date)
         active_tasks = get_active_task_ids(self._log_df, query_date)
@@ -225,6 +230,7 @@ class Log(object):
             ("Total time", "{total_time} ({percentage:3}%)"),
             ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
             ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
+            ("Break Duration", "{break_duration}"),
             ("All touched tasks", "{all_touched_tasks}",),
             ("Active tasks", "{active_tasks}",),
         ]
@@ -453,14 +459,23 @@ class Log(object):
             logger.warning(f"Set sentinel stop value: {sdt}")
         return ret
 
-    def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
+    def _calc_facts(
+        self, df: pd.DataFrame, hours_target: float, hours_max: float, break_cfg
+    ):
         shifted_dt = df[COL_LOG_DATETIME].shift(1)
         stop_mask = df[COL_TYPE] == TOKEN_STOP
         total_time = (df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
-        hours_target_dt = timedelta(hours=hours_target)
-        hours_max_dt = timedelta(hours=hours_max)
+        if break_cfg["active"]:
+            break_duration = calc_break_duration(
+                total_time, break_cfg["limits"], break_cfg["durations"]
+            )
+        else:
+            break_duration = timedelta(minutes=0)
+
+        hours_target_dt = timedelta(hours=hours_target) + break_duration
+        hours_max_dt = timedelta(hours=hours_max) + break_duration
 
         now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
         end_time = now + (hours_target_dt - total_time)
@@ -492,6 +507,7 @@ class Log(object):
             overtime=overtime_str,
             overtime_short=overtime_str[: len("00:00")],
             percentage_overtime=percentage_overtime,
+            break_duration=format_timedelta(break_duration),
         )
 
     def _aggregate_base(self, mask, keep_cols: List[str] = []):
