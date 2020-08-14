@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
-from worklog.breaks import calc_break_duration
+from worklog.breaks import BreakConfig
 from worklog.constants import (
     COL_CATEGORY,
     COL_COMMIT_DATETIME,
@@ -68,6 +68,8 @@ class Log(object):
         "Fatal. Cannot stop, because tasks are still running. "
         "Stop running tasks first: {active_tasks:} or use --force flag.\n"
     )
+
+    break_cfg: BreakConfig = BreakConfig()
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -131,7 +133,7 @@ class Log(object):
                     process = subprocess.Popen([pager, fh.name])
                     process.wait()
 
-    def report(self, month_from: datetime, month_to: datetime, break_cfg=None):
+    def report(self, month_from: datetime, month_to: datetime):
         """Generate a daily, weekly, monthly and task based report based on
         the content in the logfile."""
         session_mask = self._log_df[COL_CATEGORY] == TOKEN_SESSION
@@ -142,11 +144,7 @@ class Log(object):
 
         # Day aggregation
         df_day = self._aggregate_time(time_mask & session_mask, resample="D")
-        df_day["break"] = df_day["agg_time"].map(
-            lambda td: calc_break_duration(
-                td, break_cfg["limits"], break_cfg["durations"]
-            )
-        )
+        df_day["break"] = df_day["agg_time"].map(self.break_cfg.calc_break_duration)
 
         # Week aggregation
         df_week = df_day.set_index(COL_LOG_DATETIME).resample("W").sum().reset_index()
@@ -162,7 +160,7 @@ class Log(object):
 
         print_cols = [COL_LOG_DATETIME, "agg_time"]
         print_cols_labels = ["Date", "Total time"]
-        if break_cfg["active"]:
+        if self.break_cfg.active:
             print_cols += ["break", "agg_time_bookable"]
             print_cols_labels += ["Break", "Bookable time"]
 
@@ -193,12 +191,7 @@ class Log(object):
         self._print_aggregation("tasks", df_tasks, print_cols, print_cols_labels)
 
     def status(
-        self,
-        hours_target: float,
-        hours_max: float,
-        break_cfg,
-        query_date: date,
-        fmt: str = None,
+        self, hours_target: float, hours_max: float, query_date: date, fmt: str = None,
     ) -> None:
         """Display the current working status, e.g. total time worked at this
         day, remaining time, etc."""
@@ -220,7 +213,7 @@ class Log(object):
         logger.debug(f"Is active: {is_active}")
 
         df_day = self._add_sentinel(query_date, df_day)
-        facts = self._calc_facts(df_day, hours_target, hours_max, break_cfg)
+        facts = self._calc_facts(df_day, hours_target, hours_max)
 
         all_touched_tasks = get_all_task_ids(self._log_df, query_date)
         active_tasks = get_active_task_ids(self._log_df, query_date)
@@ -459,20 +452,13 @@ class Log(object):
             logger.warning(f"Set sentinel stop value: {sdt}")
         return ret
 
-    def _calc_facts(
-        self, df: pd.DataFrame, hours_target: float, hours_max: float, break_cfg
-    ):
+    def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
         shifted_dt = df[COL_LOG_DATETIME].shift(1)
         stop_mask = df[COL_TYPE] == TOKEN_STOP
         total_time = (df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
-        if break_cfg["active"]:
-            break_duration = calc_break_duration(
-                total_time, break_cfg["limits"], break_cfg["durations"]
-            )
-        else:
-            break_duration = timedelta(minutes=0)
+        break_duration = self.break_cfg.calc_break_duration(total_time)
 
         hours_target_dt = timedelta(hours=hours_target) + break_duration
         hours_max_dt = timedelta(hours=hours_max) + break_duration

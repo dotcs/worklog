@@ -2,22 +2,35 @@ from typing import List
 from datetime import timedelta
 
 
-def calc_break_duration(
-    td: timedelta, limits: List[int] = [], durations: List[int] = []
-):
-    """Calculate the break duration for a given timedelta and a list of
-    limits and break durations."""
-    if len(limits) != len(durations):
-        raise ValueError("limits and durations must have the same shape.")
+class BreakConfig(object):
+    _durations: List[int] = []
+    _limits: List[int] = []
 
-    full_minutes: int = int(td.total_seconds()) // 60
+    def __init__(self, limits: List[int] = [], durations: List[int] = []):
+        if len(limits) != len(durations):
+            raise ValueError("limits and durations must have the same shape.")
 
-    break_duration = 0
+        self._limits = limits
+        self._durations = durations
 
-    for i, limit in enumerate(limits):
-        if limit > full_minutes:
-            break
-        break_duration = durations[i]
+    @property
+    def active(self):
+        return len(self._durations) > 0
 
-    return timedelta(minutes=break_duration)
+    def calc_break_duration(self, td: timedelta):
+        """Calculate the break duration for a given timedelta and a list of
+        limits and break durations."""
+        if not self.active:
+            return timedelta(minutes=0)
+
+        full_minutes: int = int(td.total_seconds()) // 60
+
+        break_duration = 0
+
+        for i, limit in enumerate(self._limits):
+            if limit > full_minutes:
+                break
+            break_duration = self._durations[i]
+
+        return timedelta(minutes=break_duration)
 

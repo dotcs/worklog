@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from io import StringIO
 import json
 
+from worklog.breaks import BreakConfig
 from worklog.constants import (
     LOG_LEVELS,
     CONFIG_FILES,
@@ -36,12 +37,6 @@ def dispatch(
     Dispatch request to Log instance based on CLI arguments and
     configuration values.
     """
-    break_cfg = {
-        "active": cfg.getboolean("workday", "use_auto_breaks"),
-        "limits": json.loads(cfg.get("workday", "break_limit_minutes")),
-        "durations": json.loads(cfg.get("workday", "break_duration_minutes")),
-    }
-
     if cli_args.subcmd == SUBCMD_COMMIT:
         if cli_args.type in [TOKEN_START, TOKEN_STOP]:
             log.commit(
@@ -86,7 +81,7 @@ def dispatch(
             query_date -= timedelta(days=1)
         elif cli_args.date:
             query_date = cli_args.date.date()
-        log.status(hours_target, hours_max, break_cfg, query_date=query_date, fmt=fmt)
+        log.status(hours_target, hours_max, query_date=query_date, fmt=fmt)
     elif cli_args.subcmd == SUBCMD_DOCTOR:
         log.doctor()
     elif cli_args.subcmd == SUBCMD_LOG:
@@ -99,7 +94,7 @@ def dispatch(
         else:
             log.log(-1, use_pager, categories)
     elif cli_args.subcmd == SUBCMD_REPORT:
-        log.report(cli_args.month_from, cli_args.month_to, break_cfg=break_cfg)
+        log.report(cli_args.month_from, cli_args.month_to)
 
 
 def run() -> None:
@@ -128,6 +123,10 @@ def run() -> None:
 
     worklog_fp = os.path.expanduser(cfg.get("worklog", "path"))
     log = Log(worklog_fp)
+
+    limits = json.loads(cfg.get("workday", "break_limit_minutes"))
+    durations = json.loads(cfg.get("workday", "break_duration_minutes"))
+    log.break_cfg = BreakConfig(limits, durations)
 
     dispatch(log, parser, cli_args, cfg)
 
