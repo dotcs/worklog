@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 
-from worklog.breaks import BreakConfig
+from worklog.breaks import AutoBreak
 from worklog.constants import (
     COL_CATEGORY,
     COL_COMMIT_DATETIME,
@@ -69,7 +69,7 @@ class Log(object):
         "Stop running tasks first: {active_tasks:} or use --force flag.\n"
     )
 
-    break_cfg: BreakConfig = BreakConfig()
+    auto_break: AutoBreak = AutoBreak()
 
     def __init__(self, fp: str, separator: str = "|") -> None:
         self._log_fp = fp
@@ -144,7 +144,7 @@ class Log(object):
 
         # Day aggregation
         df_day = self._aggregate_time(time_mask & session_mask, resample="D")
-        df_day["break"] = df_day["agg_time"].map(self.break_cfg.calc_break_duration)
+        df_day["break"] = df_day["agg_time"].map(self.auto_break.get_duration)
 
         # Week aggregation
         df_week = df_day.set_index(COL_LOG_DATETIME).resample("W").sum().reset_index()
@@ -160,7 +160,7 @@ class Log(object):
 
         print_cols = [COL_LOG_DATETIME, "agg_time"]
         print_cols_labels = ["Date", "Total time"]
-        if self.break_cfg.active:
+        if self.auto_break.active:
             print_cols += ["break", "agg_time_bookable"]
             print_cols_labels += ["Break", "Bookable time"]
 
@@ -458,7 +458,7 @@ class Log(object):
         total_time = (df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
-        break_duration = self.break_cfg.calc_break_duration(total_time)
+        break_duration = self.auto_break.get_duration(total_time)
 
         hours_target_dt = timedelta(hours=hours_target) + break_duration
         hours_max_dt = timedelta(hours=hours_max) + break_duration

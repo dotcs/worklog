@@ -2,7 +2,7 @@ from typing import List
 from datetime import timedelta
 
 
-class BreakConfig(object):
+class AutoBreak(object):
     _durations: List[int] = []
     _limits: List[int] = []
 
@@ -17,7 +17,7 @@ class BreakConfig(object):
     def active(self):
         return len(self._durations) > 0
 
-    def calc_break_duration(self, td: timedelta):
+    def get_duration(self, td: timedelta):
         """Calculate the break duration for a given timedelta and a list of
         limits and break durations."""
         if not self.active:
