@@ -3,7 +3,9 @@ from configparser import ConfigParser
 from argparse import ArgumentParser, Namespace
 from datetime import date, timedelta
 from io import StringIO
+import json
 
+from worklog.breaks import AutoBreak
 from worklog.constants import (
     LOG_LEVELS,
     CONFIG_FILES,
@@ -121,6 +123,10 @@ def run() -> None:
 
     worklog_fp = os.path.expanduser(cfg.get("worklog", "path"))
     log = Log(worklog_fp)
+
+    limits = json.loads(cfg.get("workday", "auto_break_limit_minutes"))
+    durations = json.loads(cfg.get("workday", "auto_break_duration_minutes"))
+    log.auto_break = AutoBreak(limits, durations)
 
     dispatch(log, parser, cli_args, cfg)
 
