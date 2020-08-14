@@ -18,8 +18,7 @@ class AutoBreak(object):
         return len(self._durations) > 0
 
     def get_duration(self, td: timedelta):
-        """Calculate the break duration for a given timedelta and a list of
-        limits and break durations."""
+        """Calculate the break duration for a given timedelta."""
         if not self.active:
             return timedelta(minutes=0)
 
