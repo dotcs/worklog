@@ -98,10 +98,30 @@ def get_all_task_ids(df: DataFrame, query_date: date):
     return sorted(df_day[COL_TASK_IDENTIFIER].unique())
 
 
+def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
+    df_day = df[df["date"] == query_date]
+    df_day = df_day[df_day.category == "task"]
+    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]].sort_values(
+        by=[COL_LOG_DATETIME]
+    )
+
+    # TODO: Sanity check missing: Each start row should have a corresponding stop row
+    stop_mask = df_day[COL_TYPE] == TOKEN_STOP
+    shifted_dt = df_day[COL_LOG_DATETIME].shift(1)
+    df_time = df_day[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
+
+    df_result = df_day[stop_mask][[COL_TASK_IDENTIFIER]]
+    df_result["time"] = df_time
+    return df_result.set_index(COL_TASK_IDENTIFIER)["time"].to_dict()
+
+
 def get_active_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]]
+    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]].sort_values(
+        by=[COL_LOG_DATETIME]
+    )
+
     df_grouped = df_day.groupby(COL_TASK_IDENTIFIER).tail(1)
     return sorted(
         df_grouped[df_grouped[COL_TYPE] == TOKEN_START][COL_TASK_IDENTIFIER].unique()

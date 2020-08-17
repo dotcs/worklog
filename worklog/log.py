@@ -33,6 +33,7 @@ from worklog.utils import (
     format_timedelta,
     get_active_task_ids,
     get_all_task_ids,
+    get_all_task_ids_with_duration,
     get_datetime_cols_from_schema,
     get_pager,
     sentinel_datetime,
@@ -215,7 +216,7 @@ class Log(object):
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
 
-        all_touched_tasks = get_all_task_ids(self._log_df, query_date)
+        all_touched_tasks = get_all_task_ids_with_duration(self._log_df, query_date)
         active_tasks = get_active_task_ids(self._log_df, query_date)
 
         lines = [
@@ -242,7 +243,12 @@ class Log(object):
                 status="on" if is_active else "off",
                 active_tasks=f"({len(active_tasks)}) [" + ", ".join(active_tasks) + "]",
                 all_touched_tasks=f"({len(all_touched_tasks)}) ["
-                + ", ".join(all_touched_tasks)
+                + ", ".join(
+                    [
+                        f"{k} ({format_timedelta(v)})"
+                        for k, v in all_touched_tasks.items()
+                    ]
+                )
                 + "]",
             )
         )
