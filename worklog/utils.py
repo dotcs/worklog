@@ -105,14 +105,21 @@ def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
         by=[COL_LOG_DATETIME]
     )
 
-    # TODO: Sanity check missing: Each start row should have a corresponding stop row
-    stop_mask = df_day[COL_TYPE] == TOKEN_STOP
-    shifted_dt = df_day[COL_LOG_DATETIME].shift(1)
-    df_time = df_day[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
+    def _calc_time(df):
+        # TODO: Sanity check missing: Each start row should have a
+        # corresponding stop row
+        # TODO: Generalize this idea to other parts where time is calculated
+        stop_mask = df[COL_TYPE] == TOKEN_STOP
+        shifted_dt = df[COL_LOG_DATETIME].shift(1)
+        df_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
 
-    df_result = df_day[stop_mask][[COL_TASK_IDENTIFIER]]
-    df_result["time"] = df_time
-    return df_result.set_index(COL_TASK_IDENTIFIER)["time"].to_dict()
+        df_result = df[stop_mask][[COL_TASK_IDENTIFIER]]
+        df_result["time"] = df_time
+        return df_result
+
+    df_h = df_day.groupby(COL_TASK_IDENTIFIER).apply(_calc_time)["time"]
+    df_h.index = df_h.index.map(lambda k: k[0])
+    return df_h.to_dict()
 
 
 def get_active_task_ids(df: DataFrame, query_date: date):
