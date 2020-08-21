@@ -162,7 +162,7 @@ class TestUtils(unittest.TestCase):
         expected = DataFrame(
             {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
-        actual = _calc_single_task_duration(df)
+        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
         pd.testing.assert_frame_equal(actual, expected)
 
     def test_calc_task_durations_open_interval(self):
@@ -180,7 +180,7 @@ class TestUtils(unittest.TestCase):
         expected = DataFrame(
             {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
-        actual = _calc_single_task_duration(df)
+        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
         pd.testing.assert_frame_equal(actual, expected)
 
     def calc_task_durations_multiple_ordered(self):

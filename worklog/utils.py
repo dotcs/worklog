@@ -91,11 +91,15 @@ def sentinel_datetime(
     )
 
 
-def calc_task_durations(df: DataFrame):
-    return df.groupby(COL_TASK_IDENTIFIER).apply(_calc_single_task_duration)
+def calc_task_durations(
+    df: DataFrame, keep_cols: List[str] = [COL_TASK_IDENTIFIER, "time"]
+):
+    return df.groupby(COL_TASK_IDENTIFIER).apply(
+        lambda group: _calc_single_task_duration(group, keep_cols=keep_cols)
+    )
 
 
-def _calc_single_task_duration(df: DataFrame):
+def _calc_single_task_duration(df: DataFrame, keep_cols: List[str] = []):
     """
     Calculate the duration of a single task. The given DataFrame can consist
     of many log entries but all must have the same task identifier.
@@ -108,10 +112,10 @@ def _calc_single_task_duration(df: DataFrame):
     shifted_dt = df[COL_LOG_DATETIME].shift(1)
     s_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
 
-    df_result = df[stop_mask][[COL_TASK_IDENTIFIER]]
+    df_result = df[stop_mask].copy()
     df_result["time"] = s_time
     df_result = df_result.sort_values(by=[COL_TASK_IDENTIFIER])
-    return df_result
+    return df_result[keep_cols]
 
 
 def get_all_task_ids(df: DataFrame, query_date: date):
