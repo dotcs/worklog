@@ -4,16 +4,25 @@ import logging
 from unittest.mock import patch
 from io import StringIO
 from datetime import timedelta
+import pandas as pd
 from pandas import DataFrame, Series  # type: ignore
 from datetime import datetime, date, timezone
 import numpy as np  # type: ignore
 
+from worklog.constants import (
+    COL_TYPE,
+    COL_LOG_DATETIME,
+    COL_TASK_IDENTIFIER,
+    LOCAL_TIMEZONE,
+)
 from worklog.utils import (
     format_timedelta,
     empty_df_from_schema,
     get_datetime_cols_from_schema,
     check_order_session,
     sentinel_datetime,
+    calc_task_durations,
+    _calc_single_task_duration,
 )
 
 
@@ -138,3 +147,133 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_date4 = date(2020, 1, 3)
             sentinel_datetime(target_date4, tzinfo=timezone.utc)
+
+    def test_calc_task_durations_ordered(self):
+        df = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["foo", "foo"],
+                COL_TYPE: ["start", "stop"],
+                COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = DataFrame(
+            {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
+        )
+        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
+        pd.testing.assert_frame_equal(actual, expected)
+
+    def test_calc_task_durations_open_interval(self):
+        df = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["foo", "foo", "foo"],
+                COL_TYPE: ["start", "stop", "start"],
+                COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = DataFrame(
+            {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
+        )
+        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
+        pd.testing.assert_frame_equal(actual, expected)
+
+    def calc_task_durations_multiple_ordered(self):
+        df = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["foo", "foo", "bar", "bar"],
+                COL_TYPE: ["start", "stop", "start", "stop"],
+                COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["bar", "foo"],
+                "time": [timedelta(minutes=30), timedelta(hours=1)],
+            },
+            index=[3, 1],
+        )
+        actual = calc_task_durations(df)
+        pd.testing.assert_frame_equal(actual, expected)
+
+    def test_calc_task_durations_multiple_nested(self):
+        """
+        Test if the implementation works if tasks are nested.
+        """
+        df = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: [
+                    "task1",
+                    "task2",
+                    "task3",
+                    "task2",
+                    "task1",
+                    "task3",
+                ],
+                COL_TYPE: ["start", "start", "start", "stop", "stop", "stop"],
+                COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 31, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 3, 0, 0, 0, LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["task1", "task2", "task3"],
+                "time": [
+                    timedelta(hours=2),
+                    timedelta(minutes=1),
+                    timedelta(hours=1, minutes=30),
+                ],
+            },
+            index=pd.MultiIndex.from_tuples(
+                [("task1", 4), ("task2", 3), ("task3", 5)],
+                names=[COL_TASK_IDENTIFIER, None],
+            ),
+        )
+        actual = calc_task_durations(df)
+        pd.testing.assert_frame_equal(actual, expected)
+
+    def test_calc_task_durations_multiple_unordered(self):
+        """
+        Test if implementation works if the log entries are in the wrong
+        order. In this case a stop entry is listed before a start entry
+        although the order of the logged time is fine.
+        """
+        df = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["task2", "task1", "task1", "task2",],
+                COL_TYPE: ["stop", "stop", "start", "start",],
+                COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 1, 31, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = DataFrame(
+            {
+                COL_TASK_IDENTIFIER: ["task1", "task2"],
+                "time": [timedelta(hours=2), timedelta(minutes=1)],
+            },
+            index=pd.MultiIndex.from_tuples(
+                [("task1", 1), ("task2", 0)], names=[COL_TASK_IDENTIFIER, None],
+            ),
+        )
+        actual = calc_task_durations(df)
+        pd.testing.assert_frame_equal(actual, expected)

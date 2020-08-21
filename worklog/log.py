@@ -38,6 +38,7 @@ from worklog.utils import (
     get_pager,
     sentinel_datetime,
     format_numpy_timedelta,
+    calc_task_durations,
 )
 
 logger = logging.getLogger(DEFAULT_LOGGER_NAME)
@@ -165,8 +166,8 @@ class Log(object):
             print_cols += ["break", "agg_time_bookable"]
             print_cols_labels += ["Break", "Bookable time"]
 
-        def _formatters(date: str = "M"):
-            date_max_len = len("2000-01") if date == "M" else len("2000-01-01")
+        def _formatters(date_type: str = "M"):
+            date_max_len = len("2000-01") if date_type == "M" else len("2000-01-01")
             return {
                 COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
                 "agg_time": format_numpy_timedelta,
@@ -189,7 +190,13 @@ class Log(object):
 
         print_cols = [COL_TASK_IDENTIFIER, "agg_time"]
         print_cols_labels = ["Task name", "Total time"]
-        self._print_aggregation("tasks", df_tasks, print_cols, print_cols_labels)
+        self._print_aggregation(
+            "tasks",
+            df_tasks,
+            print_cols,
+            print_cols_labels,
+            formatters=_formatters("D"),
+        )
 
     def status(
         self, hours_target: float, hours_max: float, query_date: date, fmt: str = None,
@@ -504,6 +511,7 @@ class Log(object):
 
     def _aggregate_base(self, mask, keep_cols: List[str] = []):
         df = self._log_df[mask]
+        df = df.sort_values([COL_LOG_DATETIME, COL_TYPE])
         shifted_dt = df[COL_LOG_DATETIME].shift(1)
         stop_mask = df[COL_TYPE] == TOKEN_STOP
         agg_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
@@ -523,7 +531,11 @@ class Log(object):
         return df_day
 
     def _aggregate_tasks(self, mask):
-        df = self._aggregate_base(mask, keep_cols=[COL_TASK_IDENTIFIER])
+        df = calc_task_durations(
+            self._log_df[mask],
+            keep_cols=[COL_LOG_DATETIME, COL_TASK_IDENTIFIER, "time"],
+        )
+        df.rename(columns={"time": "agg_time"}, inplace=True)
         return (
             df.set_index(COL_LOG_DATETIME)
             .groupby(COL_TASK_IDENTIFIER)
