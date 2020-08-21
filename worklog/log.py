@@ -166,8 +166,8 @@ class Log(object):
             print_cols += ["break", "agg_time_bookable"]
             print_cols_labels += ["Break", "Bookable time"]
 
-        def _formatters(date: str = "M"):
-            date_max_len = len("2000-01") if date == "M" else len("2000-01-01")
+        def _formatters(date_type: str = "M"):
+            date_max_len = len("2000-01") if date_type == "M" else len("2000-01-01")
             return {
                 COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
                 "agg_time": format_numpy_timedelta,
