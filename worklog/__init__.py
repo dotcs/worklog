@@ -94,7 +94,7 @@ def dispatch(
         else:
             log.log(-1, use_pager, categories)
     elif cli_args.subcmd == SUBCMD_REPORT:
-        log.report(cli_args.month_from, cli_args.month_to)
+        log.report(cli_args.date_from, cli_args.date_to)
 
 
 def run() -> None:

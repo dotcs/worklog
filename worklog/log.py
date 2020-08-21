@@ -135,13 +135,13 @@ class Log(object):
                     process = subprocess.Popen([pager, fh.name])
                     process.wait()
 
-    def report(self, month_from: datetime, month_to: datetime):
+    def report(self, date_from: datetime, date_to: datetime):
         """Generate a daily, weekly, monthly and task based report based on
         the content in the logfile."""
         session_mask = self._log_df[COL_CATEGORY] == TOKEN_SESSION
         task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
-        time_mask = (self._log_df[COL_LOG_DATETIME] >= month_from) & (
-            self._log_df[COL_LOG_DATETIME] < month_to
+        time_mask = (self._log_df[COL_LOG_DATETIME] >= date_from) & (
+            self._log_df[COL_LOG_DATETIME] < date_to
         )
 
         # Day aggregation
