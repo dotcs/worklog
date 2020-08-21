@@ -113,37 +113,51 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-    current_month: str = now.isoformat()[: len("2000-01")]
-    next_month: str = (now.replace(day=1) + timedelta(days=31)).isoformat()[
-        : len("2000-01")
-    ]
+    current_month: str = now.replace(day=1).isoformat()[: len("2000-01-01")]
+    next_month: str = (now.replace(day=1) + timedelta(days=31)).replace(
+        day=1
+    ).isoformat()[: len("2000-01-01")]
 
     report_parser = subparsers.add_parser(SUBCMD_REPORT)
     report_parser.add_argument(
-        "--month-from",
-        type=_year_month_parser,
+        "--date-from",
+        type=_combined_month_or_day_or_week_parser,
         default=current_month,
         help=(
-            "Month from which the aggregation should be started (inclusive). "
-            "By default the current calendar month is selected."
+            "Date from which the aggregation should be started (inclusive). "
+            "By default the start of the current calendar month is selected. "
+            "Allowed input formats are YYYY-MM-DD, YYYY-MM and YYYY-WXX, with "
+            "XX referring to the week number, e.g. 35."
         ),
     )
     report_parser.add_argument(
-        "--month-to",
-        type=_year_month_parser,
+        "--date-to",
+        type=_combined_month_or_day_or_week_parser,
         default=next_month,
         help=(
-            "Month to which the aggregation should be started (exclusive). "
-            "By default the next calendar month is selected."
+            "Date to which the aggregation should be started (exclusive). "
+            "By default the next calendar month is selected. "
+            "Allowed input formats are YYYY-MM-DD, YYYY-MM and YYYY-WXX, with "
+            "XX referring to the week number, e.g. 35."
         ),
     )
 
     return parser
 
 
+def _combined_month_or_day_or_week_parser(value: str) -> datetime:
+    if re.match("^\d{4}\-\d{2}$", value):
+        return _year_month_parser(value)
+    elif re.match("^\d{4}\-\d{2}\-\d{2}$", value):
+        return _year_month_day_parser(value)
+    elif re.match("^\d{4}-W\d{2}$", value):
+        return _calendar_week_parser(value)
+    raise argparse.ArgumentTypeError(f"{value} is not a valid format")
+
+
 def _year_month_parser(value: str) -> datetime:
     local_tz = datetime.utcnow().astimezone().tzinfo
-    if not re.match("\d{4}\-\d{2}", value):
+    if not re.match("^\d{4}\-\d{2}$", value):
         raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM")
     year, month = [int(x) for x in value.split("-")]
     return datetime(year=year, month=month, day=1, tzinfo=local_tz)
@@ -151,10 +165,18 @@ def _year_month_parser(value: str) -> datetime:
 
 def _year_month_day_parser(value: str) -> datetime:
     local_tz = datetime.utcnow().astimezone().tzinfo
-    if not re.match("\d{4}\-\d{2}\-\d{2}", value):
+    if not re.match("^\d{4}\-\d{2}\-\d{2}$", value):
         raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM-DD")
     year, month, day = [int(x) for x in value.split("-")]
     return datetime(year=year, month=month, day=day, tzinfo=local_tz)
+
+
+def _calendar_week_parser(value: str) -> datetime:
+    local_tz = datetime.utcnow().astimezone().tzinfo
+    if not re.match("^\d{4}-W\d{2}$", value):
+        raise argparse.ArgumentTypeError(f"{value} is not in the format cwWW")
+    dt = datetime.strptime(value + "-1", "%Y-W%W-%w").replace(tzinfo=local_tz)
+    return dt
 
 
 def _positive_int(value: str) -> int:
