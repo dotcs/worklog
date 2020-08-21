@@ -91,6 +91,29 @@ def sentinel_datetime(
     )
 
 
+def calc_task_durations(df: DataFrame):
+    return df.groupby(COL_TASK_IDENTIFIER).apply(_calc_single_task_duration)
+
+
+def _calc_single_task_duration(df: DataFrame):
+    """
+    Calculate the duration of a single task. The given DataFrame can consist
+    of many log entries but all must have the same task identifier.
+    """
+    # TODO: Sanity check missing: Each start row should have a
+    # corresponding stop row
+    # TODO: Generalize this idea to other parts where time is calculated
+    df = df.sort_values([COL_LOG_DATETIME, COL_TYPE])
+    stop_mask = df[COL_TYPE] == TOKEN_STOP
+    shifted_dt = df[COL_LOG_DATETIME].shift(1)
+    s_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
+
+    df_result = df[stop_mask][[COL_TASK_IDENTIFIER]]
+    df_result["time"] = s_time
+    df_result = df_result.sort_values(by=[COL_TASK_IDENTIFIER])
+    return df_result
+
+
 def get_all_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
@@ -105,19 +128,7 @@ def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
         by=[COL_LOG_DATETIME]
     )
 
-    def _calc_time(df):
-        # TODO: Sanity check missing: Each start row should have a
-        # corresponding stop row
-        # TODO: Generalize this idea to other parts where time is calculated
-        stop_mask = df[COL_TYPE] == TOKEN_STOP
-        shifted_dt = df[COL_LOG_DATETIME].shift(1)
-        df_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
-
-        df_result = df[stop_mask][[COL_TASK_IDENTIFIER]]
-        df_result["time"] = df_time
-        return df_result
-
-    df_h = df_day.groupby(COL_TASK_IDENTIFIER).apply(_calc_time)["time"]
+    df_h = calc_task_durations(df_day)["time"]
     df_h.index = df_h.index.map(lambda k: k[0])
     return df_h.to_dict()
 
