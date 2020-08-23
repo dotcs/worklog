@@ -3,18 +3,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import date, timedelta
 import json
 
-from worklog.constants import (
-    SUBCMD_COMMIT,
-    SUBCMD_DOCTOR,
-    SUBCMD_LOG,
-    SUBCMD_REPORT,
-    SUBCMD_STATUS,
-    SUBCMD_TASK,
-    TOKEN_SESSION,
-    TOKEN_START,
-    TOKEN_STOP,
-    TOKEN_TASK,
-)
+import worklog.constants as wc
 from worklog.log import Log
 from worklog.utils import calc_log_time
 
@@ -26,30 +15,30 @@ def dispatch(
     Dispatch request to Log instance based on CLI arguments and
     configuration values.
     """
-    if cli_args.subcmd == SUBCMD_COMMIT:
-        if cli_args.type in [TOKEN_START, TOKEN_STOP]:
+    if cli_args.subcmd == wc.SUBCMD_COMMIT:
+        if cli_args.type in [wc.TOKEN_START, wc.TOKEN_STOP]:
             log.commit(
-                TOKEN_SESSION,
+                wc.TOKEN_SESSION,
                 cli_args.type,
                 cli_args.offset_minutes,
                 cli_args.time,
                 force=cli_args.force,
             )
-    elif cli_args.subcmd == SUBCMD_TASK:
-        if cli_args.auto_close == True and cli_args.type != TOKEN_START:
+    elif cli_args.subcmd == wc.SUBCMD_TASK:
+        if cli_args.auto_close == True and cli_args.type != wc.TOKEN_START:
             raise parser.error(
-                f'--auto-close is only allowed if the type is set to "{TOKEN_START}"',
+                f'--auto-close is only allowed if the type is set to "{wc.TOKEN_START}"',
             )
-        if cli_args.type in [TOKEN_START, TOKEN_STOP]:
+        if cli_args.type in [wc.TOKEN_START, wc.TOKEN_STOP]:
             if cli_args.id is None:
                 raise parser.error(
                     "--id is required when a new task is started/stopped"
                 )
-            if cli_args.type == TOKEN_START and cli_args.auto_close:
+            if cli_args.type == wc.TOKEN_START and cli_args.auto_close:
                 commit_dt = calc_log_time(cli_args.offset_minutes, cli_args.time)
                 log.stop_active_tasks(commit_dt)
             log.commit(
-                TOKEN_TASK,
+                wc.TOKEN_TASK,
                 cli_args.type,
                 cli_args.offset_minutes,
                 cli_args.time,
@@ -61,7 +50,7 @@ def dispatch(
             if cli_args.id is None:
                 raise parser.error("--id is required when requesting a report")
             log.task_report(cli_args.id)
-    elif cli_args.subcmd == SUBCMD_STATUS:
+    elif cli_args.subcmd == wc.SUBCMD_STATUS:
         hours_target = float(cfg.get("workday", "hours_target"))
         hours_max = float(cfg.get("workday", "hours_max"))
         fmt = cli_args.fmt
@@ -71,9 +60,9 @@ def dispatch(
         elif cli_args.date:
             query_date = cli_args.date.date()
         log.status(hours_target, hours_max, query_date=query_date, fmt=fmt)
-    elif cli_args.subcmd == SUBCMD_DOCTOR:
+    elif cli_args.subcmd == wc.SUBCMD_DOCTOR:
         log.doctor()
-    elif cli_args.subcmd == SUBCMD_LOG:
+    elif cli_args.subcmd == wc.SUBCMD_LOG:
         n = cli_args.number
         no_pager_max_entries = int(cfg.get("worklog", "no_pager_max_entries"))
         use_pager = not cli_args.no_pager and (cli_args.all or n > no_pager_max_entries)
@@ -82,5 +71,5 @@ def dispatch(
             log.log(cli_args.number, use_pager, categories)
         else:
             log.log(-1, use_pager, categories)
-    elif cli_args.subcmd == SUBCMD_REPORT:
+    elif cli_args.subcmd == wc.SUBCMD_REPORT:
         log.report(cli_args.date_from, cli_args.date_to)

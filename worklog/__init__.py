@@ -4,10 +4,7 @@ from io import StringIO
 import json
 
 from worklog.breaks import AutoBreak
-from worklog.constants import (
-    LOG_LEVELS,
-    CONFIG_FILES,
-)
+import worklog.constants as wc
 from worklog.log import Log
 from worklog.parser import get_arg_parser
 from worklog.utils import calc_log_time, configure_logger
@@ -20,18 +17,18 @@ def run() -> None:
     parser = get_arg_parser()
 
     cli_args = parser.parse_args()
-    log_level = LOG_LEVELS[min(cli_args.verbosity, len(LOG_LEVELS) - 1)]
+    log_level = wc.LOG_LEVELS[min(cli_args.verbosity, len(wc.LOG_LEVELS) - 1)]
     logger.setLevel(log_level)
 
     logger.debug(f"Parsed CLI arguments: {cli_args}")
-    logger.debug(f"Path to config files: {CONFIG_FILES}")
+    logger.debug(f"Path to config files: {wc.CONFIG_FILES}")
 
     if cli_args.subcmd is None:
         parser.print_help()
         return
 
     cfg = ConfigParser()
-    cfg.read(CONFIG_FILES)
+    cfg.read(wc.CONFIG_FILES)
 
     with StringIO() as ss:
         cfg.write(ss)

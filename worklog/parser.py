@@ -3,18 +3,7 @@ from datetime import datetime, timezone, timedelta
 import re
 import argparse
 
-from worklog.constants import (
-    SUBCMD_COMMIT,
-    SUBCMD_DOCTOR,
-    SUBCMD_LOG,
-    SUBCMD_REPORT,
-    SUBCMD_STATUS,
-    SUBCMD_TASK,
-    TOKEN_SESSION,
-    TOKEN_START,
-    TOKEN_STOP,
-    TOKEN_TASK,
-)
+import worklog.constants as wc
 
 _help_time_arg = (
     "Exact point in time. "
@@ -33,7 +22,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="subcmd")
 
     commit_parser = subparsers.add_parser(
-        SUBCMD_COMMIT,
+        wc.SUBCMD_COMMIT,
         description=(
             "Commit the start or end of a new working session to the worklog file. "
             "Use this function to stamp in the morning and stamp out in the evening."
@@ -41,7 +30,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     commit_parser.add_argument(
         "type",
-        choices=[TOKEN_START, TOKEN_STOP],
+        choices=[wc.TOKEN_START, wc.TOKEN_STOP],
         help="Persists a new work session or closes a work session.",
     )
     _add_timeshift_args(commit_parser)
@@ -53,7 +42,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     task_parser = subparsers.add_parser(
-        SUBCMD_TASK,
+        wc.SUBCMD_TASK,
         description=(
             "Tasks are pieces of work to be done or undertaken. "
             "A task can only be started during an ongoing session. "
@@ -62,7 +51,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     task_parser.add_argument(
         "type",
-        choices=[TOKEN_START, TOKEN_STOP, "list", "report"],
+        choices=[wc.TOKEN_START, wc.TOKEN_STOP, "list", "report"],
         help="Starts/stops or list tasks",
     )
     task_parser.add_argument(
@@ -79,7 +68,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     _add_timeshift_args(task_parser)
 
     status_parser = subparsers.add_parser(
-        SUBCMD_STATUS,
+        wc.SUBCMD_STATUS,
         description=(
             "The status commend shows the tracking results for an individual day. "
             "By default the current day is selected. "
@@ -101,7 +90,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     doctor_parser = subparsers.add_parser(
-        SUBCMD_DOCTOR,
+        wc.SUBCMD_DOCTOR,
         description=(
             "The doctor command checks the worklog for missing or problematic entries. "
             "It will report the following issues: non-closed working sessions"
@@ -109,7 +98,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
 
     log_parser = subparsers.add_parser(
-        SUBCMD_LOG,
+        wc.SUBCMD_LOG,
         description=(
             "Shows the content of the worklog file sorted after the date and time of the "
             "entry. "
@@ -133,7 +122,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Show all entries. System pager will be used.",
     )
     log_parser.add_argument(
-        "--category", choices=[TOKEN_SESSION, TOKEN_TASK], help="Filter category",
+        "--category", choices=[wc.TOKEN_SESSION, wc.TOKEN_TASK], help="Filter category",
     )
     log_parser.add_argument(
         "--no-pager",
@@ -152,7 +141,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     ).isoformat()[: len("2000-01-01")]
 
     report_parser = subparsers.add_parser(
-        SUBCMD_REPORT,
+        wc.SUBCMD_REPORT,
         description=(
             "Creates a report for a given time window. "
             "Working time will be aggregated on a monthly, weekly and daily basis. "

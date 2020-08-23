@@ -10,25 +10,13 @@ import shutil
 from math import floor
 import numpy as np
 
-from worklog.constants import (
-    COL_CATEGORY,
-    COL_LOG_DATETIME,
-    COL_TASK_IDENTIFIER,
-    COL_TYPE,
-    DEFAULT_LOGGER_NAME,
-    LOCAL_TIMEZONE,
-    LOG_FORMAT,
-    TOKEN_SESSION,
-    TOKEN_TASK,
-    TOKEN_START,
-    TOKEN_STOP,
-)
+import worklog.constants as wc
 
 
 def configure_logger() -> logging.Logger:
-    logger = logging.getLogger(DEFAULT_LOGGER_NAME)
+    logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter(LOG_FORMAT)
+    formatter = logging.Formatter(wc.LOG_FORMAT)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
@@ -64,22 +52,24 @@ def get_datetime_cols_from_schema(schema: Iterable[Tuple[str, str]]) -> List[str
 
 def check_order_session(df_group: DataFrame, logger: logging.Logger):
     last_type = None
-    for i, row in df_group.where(df_group[COL_CATEGORY] == TOKEN_SESSION).iterrows():
-        if i == 0 and row[COL_TYPE] != TOKEN_START:
+    for i, row in df_group.where(
+        df_group[wc.COL_CATEGORY] == wc.TOKEN_SESSION
+    ).iterrows():
+        if i == 0 and row[wc.COL_TYPE] != wc.TOKEN_START:
             logger.error(
-                f'First entry of type "{TOKEN_SESSION}" on date {row.date} is not "{TOKEN_START}".'
+                f'First entry of type "{wc.TOKEN_SESSION}" on date {row.date} is not "{wc.TOKEN_START}".'
             )
-        if row[COL_TYPE] == last_type:
+        if row[wc.COL_TYPE] == last_type:
             logger.error(
-                f'"{TOKEN_SESSION}" entries on date {row.date} are not ordered correctly.'
+                f'"{wc.TOKEN_SESSION}" entries on date {row.date} are not ordered correctly.'
             )
-        last_type = row[COL_TYPE]
-    if last_type != TOKEN_STOP:
+        last_type = row[wc.COL_TYPE]
+    if last_type != wc.TOKEN_STOP:
         logger.error(f"Date {row.date} has no stop entry.")
 
 
 def sentinel_datetime(
-    target_date: date, tzinfo: Optional[tzinfo] = LOCAL_TIMEZONE
+    target_date: date, tzinfo: Optional[tzinfo] = wc.LOCAL_TIMEZONE
 ) -> datetime:
     if target_date > datetime.now().date():
         raise ValueError("Only dates on the same day or in the past are supported.")
@@ -92,9 +82,9 @@ def sentinel_datetime(
 
 
 def calc_task_durations(
-    df: DataFrame, keep_cols: List[str] = [COL_TASK_IDENTIFIER, "time"]
+    df: DataFrame, keep_cols: List[str] = [wc.COL_TASK_IDENTIFIER, "time"]
 ):
-    return df.groupby(COL_TASK_IDENTIFIER).apply(
+    return df.groupby(wc.COL_TASK_IDENTIFIER).apply(
         lambda group: _calc_single_task_duration(group, keep_cols=keep_cols)
     )
 
@@ -107,30 +97,30 @@ def _calc_single_task_duration(df: DataFrame, keep_cols: List[str] = []):
     # TODO: Sanity check missing: Each start row should have a
     # corresponding stop row
     # TODO: Generalize this idea to other parts where time is calculated
-    df = df.sort_values([COL_LOG_DATETIME, COL_TYPE])
-    stop_mask = df[COL_TYPE] == TOKEN_STOP
-    shifted_dt = df[COL_LOG_DATETIME].shift(1)
-    s_time = df[stop_mask][COL_LOG_DATETIME] - shifted_dt[stop_mask]
+    df = df.sort_values([wc.COL_LOG_DATETIME, wc.COL_TYPE])
+    stop_mask = df[wc.COL_TYPE] == wc.TOKEN_STOP
+    shifted_dt = df[wc.COL_LOG_DATETIME].shift(1)
+    s_time = df[stop_mask][wc.COL_LOG_DATETIME] - shifted_dt[stop_mask]
 
     df_result = df[stop_mask].copy()
     df_result["time"] = s_time
-    df_result = df_result.sort_values(by=[COL_TASK_IDENTIFIER])
+    df_result = df_result.sort_values(by=[wc.COL_TASK_IDENTIFIER])
     return df_result[keep_cols]
 
 
 def get_all_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]]
-    return sorted(df_day[COL_TASK_IDENTIFIER].unique())
+    df_day = df_day[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]]
+    return sorted(df_day[wc.COL_TASK_IDENTIFIER].unique())
 
 
 def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]].sort_values(
-        by=[COL_LOG_DATETIME]
-    )
+    df_day = df_day[
+        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
+    ].sort_values(by=[wc.COL_LOG_DATETIME])
 
     df_h = calc_task_durations(df_day)["time"]
     df_h.index = df_h.index.map(lambda k: k[0])
@@ -140,21 +130,23 @@ def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
 def get_active_task_ids(df: DataFrame, query_date: date):
     df_day = df[df["date"] == query_date]
     df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[COL_LOG_DATETIME, COL_TYPE, COL_TASK_IDENTIFIER]].sort_values(
-        by=[COL_LOG_DATETIME]
-    )
+    df_day = df_day[
+        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
+    ].sort_values(by=[wc.COL_LOG_DATETIME])
 
-    df_grouped = df_day.groupby(COL_TASK_IDENTIFIER).tail(1)
+    df_grouped = df_day.groupby(wc.COL_TASK_IDENTIFIER).tail(1)
     return sorted(
-        df_grouped[df_grouped[COL_TYPE] == TOKEN_START][COL_TASK_IDENTIFIER].unique()
+        df_grouped[df_grouped[wc.COL_TYPE] == wc.TOKEN_START][
+            wc.COL_TASK_IDENTIFIER
+        ].unique()
     )
 
 
 def extract_intervals(
     df: DataFrame,
-    dt_col: str = COL_LOG_DATETIME,
-    TOKEN_START: str = TOKEN_START,
-    TOKEN_STOP: str = TOKEN_STOP,
+    dt_col: str = wc.COL_LOG_DATETIME,
+    TOKEN_START: str = wc.TOKEN_START,
+    TOKEN_STOP: str = wc.TOKEN_STOP,
     logger: Optional[logging.Logger] = None,
 ):
     def log_error(msg):
@@ -164,11 +156,11 @@ def extract_intervals(
     intervals = []
     last_start: Optional[datetime] = None
     for i, row in df.iterrows():
-        if row[COL_TYPE] == TOKEN_START:
+        if row[wc.COL_TYPE] == TOKEN_START:
             if last_start is not None:
                 log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
             last_start = row[dt_col]
-        elif row[COL_TYPE] == TOKEN_STOP:
+        elif row[wc.COL_TYPE] == TOKEN_STOP:
             if last_start is None:
                 log_error("No start entry found. Skip entry.")
                 continue  # skip this entry
@@ -207,7 +199,7 @@ def _get_or_update_dt(dt: datetime, time: str):
         h_time = datetime.fromisoformat(time)
         if h_time.tzinfo is None:
             # Set local timezone if not defined explicitly.
-            h_time = h_time.replace(tzinfo=LOCAL_TIMEZONE)
+            h_time = h_time.replace(tzinfo=wc.LOCAL_TIMEZONE)
         return h_time
 
 
