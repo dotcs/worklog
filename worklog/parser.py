@@ -20,8 +20,7 @@ _help_time_arg = (
     "Exact point in time. "
     "Can be a either hours and minutes (format: 'hh:mm') on the same day or a full ISO "
     "format string, such as '2020-08-05T08:15:00+02:00'. "
-    "In the latter case the local timezone is used if no timezone is specified "
-    "explicitly."
+    "In the latter case the local timezone is used if the timezone part is left empty."
 )
 
 
@@ -33,21 +32,34 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="subcmd")
 
-    commit_parser = subparsers.add_parser(SUBCMD_COMMIT)
+    commit_parser = subparsers.add_parser(
+        SUBCMD_COMMIT,
+        description=(
+            "Commit the start or end of a new working session to the worklog file. "
+            "Use this function to stamp in the morning and stamp out in the evening."
+        ),
+    )
     commit_parser.add_argument(
         "type",
         choices=[TOKEN_START, TOKEN_STOP],
-        help="Commits a new entry to the log.",
+        help="Persists a new work session or closes a work session.",
     )
     _add_timeshift_args(commit_parser)
     commit_parser.add_argument(
         "-f",
         "--force",
         action="store_true",
-        help="Force command, will auto-stop running tasks",
+        help="Force command, will auto-stop running tasks.",
     )
 
-    task_parser = subparsers.add_parser(SUBCMD_TASK)
+    task_parser = subparsers.add_parser(
+        SUBCMD_TASK,
+        description=(
+            "Tasks are pieces of work to be done or undertaken. "
+            "A task can only be started during an ongoing session. "
+            "Use 'wl commit start' to start a new working session."
+        ),
+    )
     task_parser.add_argument(
         "type",
         choices=[TOKEN_START, TOKEN_STOP, "list", "report"],
@@ -66,7 +78,15 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     _add_timeshift_args(task_parser)
 
-    status_parser = subparsers.add_parser(SUBCMD_STATUS)
+    status_parser = subparsers.add_parser(
+        SUBCMD_STATUS,
+        description=(
+            "The status commend shows the tracking results for an individual day. "
+            "By default the current day is selected. "
+            "For integration of the current status into a status bar, use the `--fmt` "
+            "argument."
+        ),
+    )
     status_time_grp = status_parser.add_mutually_exclusive_group()
     status_time_grp.add_argument(
         "--yesterday",
@@ -80,9 +100,22 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--fmt", type=str, default=None, help="Use a custom formatted string"
     )
 
-    doctor_parser = subparsers.add_parser(SUBCMD_DOCTOR)
+    doctor_parser = subparsers.add_parser(
+        SUBCMD_DOCTOR,
+        description=(
+            "The doctor command checks the worklog for missing or problematic entries. "
+            "It will report the following issues: non-closed working sessions"
+        ),
+    )
 
-    log_parser = subparsers.add_parser(SUBCMD_LOG)
+    log_parser = subparsers.add_parser(
+        SUBCMD_LOG,
+        description=(
+            "Shows the content of the worklog file sorted after the date and time of the "
+            "entry. "
+            "Use this command to manually review the content of the worklog."
+        ),
+    )
     log_parser.add_argument(
         "-n",
         "--number",
@@ -118,7 +151,15 @@ def get_arg_parser() -> argparse.ArgumentParser:
         day=1
     ).isoformat()[: len("2000-01-01")]
 
-    report_parser = subparsers.add_parser(SUBCMD_REPORT)
+    report_parser = subparsers.add_parser(
+        SUBCMD_REPORT,
+        description=(
+            "Creates a report for a given time window. "
+            "Working time will be aggregated on a monthly, weekly and daily basis. "
+            "Tasks will be aggregated separately. "
+            "By default the current month will be used for the report."
+        ),
+    )
     report_parser.add_argument(
         "--date-from",
         type=_combined_month_or_day_or_week_parser,
