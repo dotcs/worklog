@@ -17,6 +17,7 @@ from worklog.utils import (
     calc_task_durations,
     check_order_session,
     empty_df_from_schema,
+    format_numpy_timedelta,
     format_timedelta,
     get_active_task_ids,
     get_all_task_ids_with_duration,
@@ -421,3 +422,25 @@ class TestUtils(unittest.TestCase):
         mock.assert_not_called()
         self.assertEqual(actual, expected)
 
+    def test_format_numpy_timedelta_nat(self):
+        actual = format_numpy_timedelta(np.timedelta64("nAt"))
+        expected = "00:00:00"
+
+        self.assertEqual(actual, expected)
+
+    def test_format_numpy_timedelta_valid(self):
+        actual = format_numpy_timedelta(np.timedelta64(100, "s"))
+        expected = "00:01:40"
+
+        self.assertEqual(actual, expected)
+
+    def test_format_numpy_timedelta_valid_days(self):
+        actual = format_numpy_timedelta(np.timedelta64(2, "D"))
+        expected = "48:00:00"
+
+        self.assertEqual(actual, expected)
+
+        actual = format_numpy_timedelta(np.timedelta64(20, "D"))
+        expected = "480:00:00"
+
+        self.assertEqual(actual, expected)
