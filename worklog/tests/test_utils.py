@@ -11,16 +11,17 @@ import numpy as np  # type: ignore
 
 import worklog.constants as wc
 from worklog.utils import (
-    format_timedelta,
-    empty_df_from_schema,
-    get_datetime_cols_from_schema,
-    check_order_session,
-    sentinel_datetime,
-    calc_task_durations,
     _calc_single_task_duration,
-    get_all_task_ids_with_duration,
+    _get_or_update_dt,
+    calc_task_durations,
+    check_order_session,
+    empty_df_from_schema,
+    format_timedelta,
     get_active_task_ids,
+    get_all_task_ids_with_duration,
+    get_datetime_cols_from_schema,
     get_pager,
+    sentinel_datetime,
 )
 
 
@@ -349,5 +350,36 @@ class TestUtils(unittest.TestCase):
 
         actual = get_pager()
         expected = "/path/to/less"
+
+        self.assertEqual(actual, expected)
+
+    def test_get_or_update_dt_with_time(self):
+        dt = datetime(2020, 1, 1, 0, 0, 0, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "05:06")
+        expected = datetime(2020, 1, 1, 5, 6, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "14:06")
+        expected = datetime(2020, 1, 1, 14, 6, tzinfo=wc.LOCAL_TIMEZONE)
+
+        self.assertEqual(actual, expected)
+
+    def test_get_or_update_dt_with_iso_datestr(self):
+        dt = datetime(2020, 1, 1, 0, 0, 0, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "1999-12-13")
+        expected = datetime(1999, 12, 13, 0, 0, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "1999-12-13T01:12")
+        expected = datetime(1999, 12, 13, 1, 12, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "2020-02-03 04:05")
+        expected = datetime(2020, 2, 3, 4, 5, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "2020-02-03 14:05:03")
+        expected = datetime(2020, 2, 3, 14, 5, tzinfo=wc.LOCAL_TIMEZONE)
+
+        actual = _get_or_update_dt(dt, "2020-02-03 04:05:03+00:00")
+        expected = datetime(2020, 2, 3, 4, 5, tzinfo=timezone.utc)
 
         self.assertEqual(actual, expected)

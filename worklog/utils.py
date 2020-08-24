@@ -188,7 +188,7 @@ def _get_or_update_dt(dt: datetime, time: str):
         hour, minute = h_time.hour, h_time.minute
         return dt.replace(hour=hour, minute=minute, second=0)
     except ValueError:
-        h_time = datetime.fromisoformat(time)
+        h_time = datetime.fromisoformat(time).replace(second=0)
         if h_time.tzinfo is None:
             # Set local timezone if not defined explicitly.
             h_time = h_time.replace(tzinfo=wc.LOCAL_TIMEZONE)
