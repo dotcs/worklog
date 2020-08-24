@@ -216,11 +216,9 @@ class Log(object):
 
         date_mask = self._log_df["date"] == query_date
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
-        touched_tasks_mask = date_mask & task_mask
-        all_touched_tasks = get_all_task_ids_with_duration(
-            self._log_df[touched_tasks_mask]
-        )
-        active_tasks = get_active_task_ids(self._log_df, query_date)
+        sel_task_mask = date_mask & task_mask
+        all_touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
+        active_tasks = get_active_task_ids(self._log_df[sel_task_mask])
 
         lines = [
             ("Status", "Tracking {status}"),
@@ -259,7 +257,8 @@ class Log(object):
     def stop_active_tasks(self, log_dt: datetime):
         """Stop all active tasks by commiting changes to the logfile."""
         query_date = log_dt.date()
-        active_task_ids = get_active_task_ids(self._log_df, query_date)
+        date_mask = self._log_df["date"] == query_date
+        active_task_ids = get_active_task_ids(self._log_df[date_mask])
         for task_id in active_task_ids:
             self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
 
@@ -368,7 +367,8 @@ class Log(object):
 
         # Test if there are running tasks
         if category == wc.TOKEN_SESSION:
-            active_tasks = get_active_task_ids(self._log_df, log_dt.date())
+            date_mask = self._log_df["date"] == log_dt.date()
+            active_tasks = get_active_task_ids(self._log_df[date_mask])
             if len(active_tasks) > 0:
                 if not force:
                     msg = self._err_msg_commit_active_tasks.format(

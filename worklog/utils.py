@@ -119,14 +119,12 @@ def get_all_task_ids_with_duration(df: DataFrame):
     return s.to_dict()
 
 
-def get_active_task_ids(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[
-        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
-    ].sort_values(by=[wc.COL_LOG_DATETIME])
+def get_active_task_ids(df: DataFrame):
+    df = df[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]].sort_values(
+        by=[wc.COL_LOG_DATETIME]
+    )
 
-    df_grouped = df_day.groupby(wc.COL_TASK_IDENTIFIER).tail(1)
+    df_grouped = df.groupby(wc.COL_TASK_IDENTIFIER).tail(1)
     return sorted(
         df_grouped[df_grouped[wc.COL_TYPE] == wc.TOKEN_START][
             wc.COL_TASK_IDENTIFIER
@@ -175,9 +173,11 @@ def get_pager() -> Optional[str]:
     # Windows comes pre-installed with the 'more' pager.
     # See https://superuser.com/a/426229
     # Unix distributions also have 'more' pre-installed.
-    default_pager = shutil.which("more")
-    if shutil.which("less") is not None:
-        default_pager = "less"
+    more_bin = shutil.which("more")
+    less_bin = shutil.which("less")
+    default_pager = more_bin
+    if less_bin is not None:
+        default_pager = less_bin
     pager = os.getenv("PAGER", default_pager)
     return pager
 

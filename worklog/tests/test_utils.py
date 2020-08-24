@@ -18,6 +18,9 @@ from worklog.utils import (
     sentinel_datetime,
     calc_task_durations,
     _calc_single_task_duration,
+    get_all_task_ids_with_duration,
+    get_active_task_ids,
+    get_pager,
 )
 
 
@@ -282,3 +285,69 @@ class TestUtils(unittest.TestCase):
         )
         actual = calc_task_durations(df)
         pd.testing.assert_frame_equal(actual, expected)
+
+    def test_get_all_task_ids_with_duration(self):
+        df = DataFrame(
+            {
+                wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task2", "task1",],
+                wc.COL_TYPE: ["start", "start", "stop", "stop",],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 3, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = {"task1": timedelta(hours=3), "task2": timedelta(hours=1)}
+        actual = get_all_task_ids_with_duration(df)
+        self.assertEqual(actual, expected)
+
+    def test_get_active_task_ids(self):
+        df = DataFrame(
+            {
+                wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task2"],
+                wc.COL_TYPE: ["start", "start", "stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                ],
+            }
+        )
+        expected = ["task1"]
+        actual = get_active_task_ids(df)
+        self.assertEqual(actual, expected)
+
+    @patch("os.getenv")
+    @patch("shutil.which")
+    def test_get_pager_no_less_and_env_unset(self, mock_which, mock_getenv):
+        mock_which.side_effect = ["/path/to/more", None]
+        mock_getenv.side_effect = lambda _, default_value: default_value
+
+        actual = get_pager()
+        expected = "/path/to/more"
+
+        self.assertEqual(actual, expected)
+
+    @patch("os.getenv")
+    @patch("shutil.which")
+    def test_get_pager_no_less_and_env_set(self, mock_which, mock_getenv):
+        mock_which.side_effect = ["/path/to/more", None]
+        mock_getenv.return_value = "/path/to/less"
+
+        actual = get_pager()
+        expected = "/path/to/less"
+
+        self.assertEqual(actual, expected)
+
+    @patch("os.getenv")
+    @patch("shutil.which")
+    def test_get_pager_has_less_and_env_unset(self, mock_which, mock_getenv):
+        mock_which.side_effect = ["/path/to/more", "/path/to/less"]
+        mock_getenv.side_effect = lambda _, default_value: default_value
+
+        actual = get_pager()
+        expected = "/path/to/less"
+
+        self.assertEqual(actual, expected)
