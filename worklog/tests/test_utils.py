@@ -1,7 +1,7 @@
 from typing import Optional
 import unittest
 import logging
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from io import StringIO
 from datetime import timedelta
 import pandas as pd
@@ -13,6 +13,7 @@ import worklog.constants as wc
 from worklog.utils import (
     _calc_single_task_duration,
     _get_or_update_dt,
+    calc_log_time,
     calc_task_durations,
     check_order_session,
     empty_df_from_schema,
@@ -383,3 +384,40 @@ class TestUtils(unittest.TestCase):
         expected = datetime(2020, 2, 3, 4, 5, tzinfo=timezone.utc)
 
         self.assertEqual(actual, expected)
+
+    @patch(
+        "worklog.utils.datetime",
+        Mock(now=Mock(return_value=datetime(2020, 1, 1, tzinfo=timezone.utc))),
+    )
+    def test_calc_log_time_no_corrections(self):
+
+        expected = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        actual = calc_log_time()
+
+        self.assertEqual(actual, expected)
+
+    @patch(
+        "worklog.utils.datetime",
+        Mock(now=Mock(return_value=datetime(2020, 1, 1, tzinfo=timezone.utc))),
+    )
+    @patch("worklog.utils._get_or_update_dt")
+    def test_calc_log_time_with_time_corrections(self, mock):
+
+        dt = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        actual = calc_log_time(time="20:21")
+
+        mock.assert_called_with(dt, "20:21")
+
+    @patch(
+        "worklog.utils.datetime",
+        Mock(now=Mock(return_value=datetime(2020, 1, 1, tzinfo=timezone.utc))),
+    )
+    @patch("worklog.utils._get_or_update_dt")
+    def test_calc_log_time_with_offset_minutes_corrections(self, mock):
+
+        expected = datetime(2020, 1, 1, 0, 10, tzinfo=timezone.utc)
+        actual = calc_log_time(offset_min=10)
+
+        mock.assert_not_called()
+        self.assertEqual(actual, expected)
+
