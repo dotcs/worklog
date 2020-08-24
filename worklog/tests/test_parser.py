@@ -3,7 +3,11 @@ from unittest.mock import patch
 from io import StringIO
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError
 
-from worklog.parser import get_arg_parser, _positive_int
+from worklog.parser import (
+    get_arg_parser,
+    _positive_int,
+    _combined_month_or_day_or_week_parser,
+)
 
 
 class TestParser(unittest.TestCase):
@@ -21,6 +25,25 @@ class TestParser(unittest.TestCase):
     def test_positive_int_with_neg_int(self):
         with self.assertRaises(ArgumentTypeError):
             _positive_int("-5")
+
+    def test_combined_month_or_day_or_week_parser_value_unknown(self):
+        with self.assertRaises(ArgumentTypeError):
+            _combined_month_or_day_or_week_parser("foobar")
+
+    @patch("worklog.parser._year_month_parser")
+    def test_combined_month_or_day_or_week_parser_ym(self, ym_mock):
+        _combined_month_or_day_or_week_parser("2020-01")
+        ym_mock.assert_called_with("2020-01")
+
+    @patch("worklog.parser._year_month_day_parser")
+    def test_combined_month_or_day_or_week_parser_ymd(self, ymd_mock):
+        _combined_month_or_day_or_week_parser("2020-01-01")
+        ymd_mock.assert_called_with("2020-01-01")
+
+    @patch("worklog.parser._calendar_week_parser")
+    def test_combined_month_or_day_or_week_parser_cw(self, cw_mock):
+        _combined_month_or_day_or_week_parser("2020-W01")
+        cw_mock.assert_called_with("2020-W01")
 
     @patch("sys.stderr", new_callable=StringIO)
     def test_missing_subcmd_throws_and_exits(self, mock_err):
