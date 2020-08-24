@@ -20,7 +20,6 @@ from worklog.utils import (
     extract_intervals,
     format_timedelta,
     get_active_task_ids,
-    get_all_task_ids,
     get_all_task_ids_with_duration,
     get_datetime_cols_from_schema,
     get_pager,
@@ -215,7 +214,12 @@ class Log(object):
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
 
-        all_touched_tasks = get_all_task_ids_with_duration(self._log_df, query_date)
+        date_mask = self._log_df["date"] == query_date
+        task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        touched_tasks_mask = date_mask & task_mask
+        all_touched_tasks = get_all_task_ids_with_duration(
+            self._log_df[touched_tasks_mask]
+        )
         active_tasks = get_active_task_ids(self._log_df, query_date)
 
         lines = [

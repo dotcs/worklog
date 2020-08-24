@@ -9,12 +9,7 @@ from pandas import DataFrame, Series  # type: ignore
 from datetime import datetime, date, timezone
 import numpy as np  # type: ignore
 
-from worklog.constants import (
-    COL_TYPE,
-    COL_LOG_DATETIME,
-    COL_TASK_IDENTIFIER,
-    LOCAL_TIMEZONE,
-)
+import worklog.constants as wc
 from worklog.utils import (
     format_timedelta,
     empty_df_from_schema,
@@ -27,6 +22,12 @@ from worklog.utils import (
 
 
 class TestUtils(unittest.TestCase):
+    def test_format_timedelta_invalid_value(self):
+        td = None
+        expected = "00:00:00"
+        actual = format_timedelta(td)
+        self.assertEqual(expected, actual)
+
     def test_format_timedelta(self):
         td = timedelta(hours=1, minutes=5, seconds=30)
         expected = "01:05:30"
@@ -151,54 +152,58 @@ class TestUtils(unittest.TestCase):
     def test_calc_task_durations_ordered(self):
         df = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["foo", "foo"],
-                COL_TYPE: ["start", "stop"],
-                COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
+                wc.COL_TASK_IDENTIFIER: ["foo", "foo"],
+                wc.COL_TYPE: ["start", "stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
                 ],
             }
         )
         expected = DataFrame(
-            {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
+            {wc.COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
-        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
+        actual = _calc_single_task_duration(
+            df, keep_cols=[wc.COL_TASK_IDENTIFIER, "time"]
+        )
         pd.testing.assert_frame_equal(actual, expected)
 
     def test_calc_task_durations_open_interval(self):
         df = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["foo", "foo", "foo"],
-                COL_TYPE: ["start", "stop", "start"],
-                COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                wc.COL_TASK_IDENTIFIER: ["foo", "foo", "foo"],
+                wc.COL_TYPE: ["start", "stop", "start"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
                 ],
             }
         )
         expected = DataFrame(
-            {COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
+            {wc.COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
-        actual = _calc_single_task_duration(df, keep_cols=[COL_TASK_IDENTIFIER, "time"])
+        actual = _calc_single_task_duration(
+            df, keep_cols=[wc.COL_TASK_IDENTIFIER, "time"]
+        )
         pd.testing.assert_frame_equal(actual, expected)
 
     def calc_task_durations_multiple_ordered(self):
         df = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["foo", "foo", "bar", "bar"],
-                COL_TYPE: ["start", "stop", "start", "stop"],
-                COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
+                wc.COL_TASK_IDENTIFIER: ["foo", "foo", "bar", "bar"],
+                wc.COL_TYPE: ["start", "stop", "start", "stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
                 ],
             }
         )
         expected = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["bar", "foo"],
+                wc.COL_TASK_IDENTIFIER: ["bar", "foo"],
                 "time": [timedelta(minutes=30), timedelta(hours=1)],
             },
             index=[3, 1],
@@ -212,7 +217,7 @@ class TestUtils(unittest.TestCase):
         """
         df = DataFrame(
             {
-                COL_TASK_IDENTIFIER: [
+                wc.COL_TASK_IDENTIFIER: [
                     "task1",
                     "task2",
                     "task3",
@@ -220,20 +225,20 @@ class TestUtils(unittest.TestCase):
                     "task1",
                     "task3",
                 ],
-                COL_TYPE: ["start", "start", "start", "stop", "stop", "stop"],
-                COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 31, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 3, 0, 0, 0, LOCAL_TIMEZONE),
+                wc.COL_TYPE: ["start", "start", "start", "stop", "stop", "stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 31, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 3, 0, 0, 0, wc.LOCAL_TIMEZONE),
                 ],
             }
         )
         expected = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["task1", "task2", "task3"],
+                wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task3"],
                 "time": [
                     timedelta(hours=2),
                     timedelta(minutes=1),
@@ -242,7 +247,7 @@ class TestUtils(unittest.TestCase):
             },
             index=pd.MultiIndex.from_tuples(
                 [("task1", 4), ("task2", 3), ("task3", 5)],
-                names=[COL_TASK_IDENTIFIER, None],
+                names=[wc.COL_TASK_IDENTIFIER, None],
             ),
         )
         actual = calc_task_durations(df)
@@ -256,23 +261,23 @@ class TestUtils(unittest.TestCase):
         """
         df = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["task2", "task1", "task1", "task2",],
-                COL_TYPE: ["stop", "stop", "start", "start",],
-                COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 1, 31, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 0, 0, 0, 0, LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, LOCAL_TIMEZONE),
+                wc.COL_TASK_IDENTIFIER: ["task2", "task1", "task1", "task2",],
+                wc.COL_TYPE: ["stop", "stop", "start", "start",],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 1, 31, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
                 ],
             }
         )
         expected = DataFrame(
             {
-                COL_TASK_IDENTIFIER: ["task1", "task2"],
+                wc.COL_TASK_IDENTIFIER: ["task1", "task2"],
                 "time": [timedelta(hours=2), timedelta(minutes=1)],
             },
             index=pd.MultiIndex.from_tuples(
-                [("task1", 1), ("task2", 0)], names=[COL_TASK_IDENTIFIER, None],
+                [("task1", 1), ("task2", 0)], names=[wc.COL_TASK_IDENTIFIER, None],
             ),
         )
         actual = calc_task_durations(df)

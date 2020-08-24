@@ -29,7 +29,7 @@ def format_timedelta(td: timedelta) -> str:
         hours, remainder = divmod(total_secs, 3600)
         minutes, seconds = divmod(remainder, 60)
         return "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
-    except ValueError:
+    except (AttributeError, ValueError):
         return "{:02}:{:02}:{:02}".format(0, 0, 0)
 
 
@@ -108,23 +108,15 @@ def _calc_single_task_duration(df: DataFrame, keep_cols: List[str] = []):
     return df_result[keep_cols]
 
 
-def get_all_task_ids(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]]
-    return sorted(df_day[wc.COL_TASK_IDENTIFIER].unique())
+def get_all_task_ids_with_duration(df: DataFrame):
+    df = df[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]].sort_values(
+        by=[wc.COL_LOG_DATETIME]
+    )
 
-
-def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[
-        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
-    ].sort_values(by=[wc.COL_LOG_DATETIME])
-
-    df_h = calc_task_durations(df_day)["time"]
-    df_h.index = df_h.index.map(lambda k: k[0])
-    return df_h.to_dict()
+    df_h = calc_task_durations(df)
+    s = df_h["time"]
+    s.index = df_h.index.map(lambda k: k[0])
+    return s.to_dict()
 
 
 def get_active_task_ids(df: DataFrame, query_date: date):
