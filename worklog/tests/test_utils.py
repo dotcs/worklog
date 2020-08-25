@@ -8,6 +8,7 @@ import pandas as pd
 from pandas import DataFrame, Series  # type: ignore
 from datetime import datetime, date, timezone
 import numpy as np  # type: ignore
+import sys
 
 import worklog.constants as wc
 from worklog.utils import (
@@ -16,6 +17,7 @@ from worklog.utils import (
     calc_log_time,
     calc_task_durations,
     check_order_session,
+    configure_logger,
     empty_df_from_schema,
     format_numpy_timedelta,
     format_timedelta,
@@ -444,3 +446,22 @@ class TestUtils(unittest.TestCase):
         expected = "480:00:00"
 
         self.assertEqual(actual, expected)
+
+    def test_configure_logger_name(self):
+        logger = configure_logger()
+        name = logger.name
+        self.assertEqual(name, wc.DEFAULT_LOGGER_NAME)
+
+    def test_configure_logger_handlers(self):
+        logger = configure_logger()
+
+        has_handlers = logger.hasHandlers()
+        self.assertTrue(has_handlers)
+
+        sys_handler = logger.handlers[0]
+        self.assertEqual(sys_handler.stream, sys.stdout)
+
+    def test_configure_logger_default_log_level(self):
+        logger = configure_logger()
+        log_level = logger.level
+        self.assertEqual(log_level, logging.INFO)
