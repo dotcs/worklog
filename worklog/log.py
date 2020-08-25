@@ -91,7 +91,7 @@ class Log(object):
         and are stored in the logfile."""
         task_df = self._log_df[self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK]
         sys.stdout.write("These tasks are listed in the log:\n")
-        for task_id in sorted(task_df[COL_TASK_IDENTIFIER].unique()):
+        for task_id in sorted(task_df[wc.COL_TASK_IDENTIFIER].unique()):
             sys.stdout.write(f"{task_id}\n")
 
     def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
@@ -264,8 +264,8 @@ class Log(object):
 
     def task_report(self, task_id):
         """Generate a report of a given task."""
-        task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
-        task_id_mask = self._log_df[COL_TASK_IDENTIFIER] == task_id
+        task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        task_id_mask = self._log_df[wc.COL_TASK_IDENTIFIER] == task_id
         mask = task_mask & task_id_mask
         task_df = self._log_df[mask]
 
@@ -518,7 +518,7 @@ class Log(object):
     def _aggregate_time(self, mask, resample="D"):
         df = self._aggregate_base(mask, keep_cols=["date"])
         df_day = (
-            df.set_index(COL_LOG_DATETIME)
+            df.set_index(wc.COL_LOG_DATETIME)
             .resample(resample)
             .sum()
             .reset_index()
@@ -529,12 +529,12 @@ class Log(object):
     def _aggregate_tasks(self, mask):
         df = calc_task_durations(
             self._log_df[mask],
-            keep_cols=[COL_LOG_DATETIME, COL_TASK_IDENTIFIER, "time"],
+            keep_cols=[wc.COL_LOG_DATETIME, wc.COL_TASK_IDENTIFIER, "time"],
         )
         df.rename(columns={"time": "agg_time"}, inplace=True)
         return (
-            df.set_index(COL_LOG_DATETIME)
-            .groupby(COL_TASK_IDENTIFIER)
+            df.set_index(wc.COL_LOG_DATETIME)
+            .groupby(wc.COL_TASK_IDENTIFIER)
             .sum()
             .reset_index()
         )
