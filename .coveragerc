@@ -1,0 +1,9 @@
+[run]
+branch = True
+
+source =
+    worklog/
+
+[report]
+omit =
+    worklog/tests/*
