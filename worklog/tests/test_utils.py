@@ -19,6 +19,7 @@ from worklog.utils import (
     check_order_session,
     configure_logger,
     empty_df_from_schema,
+    extract_intervals,
     format_numpy_timedelta,
     format_timedelta,
     get_active_task_ids,
@@ -465,3 +466,55 @@ class TestUtils(unittest.TestCase):
         logger = configure_logger()
         log_level = logger.level
         self.assertEqual(log_level, logging.INFO)
+
+    def test_extract_intervals_empty_dataframe(self):
+        df = DataFrame()
+
+        actual = extract_intervals(df)
+        expected = DataFrame(columns=["date", "start", "stop", "interval"])
+
+        pd.testing.assert_frame_equal(actual, expected)
+
+    def test_extract_intervals_valid(self):
+        mock_logger = Mock(logging.Logger)
+        df = DataFrame(
+            {
+                wc.COL_TASK_IDENTIFIER: ["foo", "foo"],
+                wc.COL_TYPE: ["start", "stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                ],
+            }
+        )
+
+        actual = extract_intervals(df, logger=mock_logger)
+        expected = DataFrame(
+            {
+                "date": [date(2020, 1, 1)],
+                "start": [datetime(2020, 1, 1, 0, tzinfo=wc.LOCAL_TIMEZONE)],
+                "stop": [datetime(2020, 1, 1, 1, tzinfo=wc.LOCAL_TIMEZONE)],
+                "interval": [timedelta(hours=1)],
+            }
+        )
+
+        pd.testing.assert_frame_equal(actual, expected)
+        mock_logger.error.assert_not_called()
+
+    def test_extract_intervals_invalid_start_missing(self):
+        mock_logger = Mock(logging.Logger)
+        df = DataFrame(
+            {
+                wc.COL_TASK_IDENTIFIER: ["foo"],
+                wc.COL_TYPE: ["stop"],
+                wc.COL_LOG_DATETIME: [
+                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
+                ],
+            }
+        )
+
+        actual = extract_intervals(df, logger=mock_logger)
+        expected = DataFrame(columns=["date", "start", "stop", "interval"])
+
+        pd.testing.assert_frame_equal(actual, expected)
+        mock_logger.error.assert_called_once()

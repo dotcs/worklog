@@ -133,11 +133,7 @@ def get_active_task_ids(df: DataFrame):
 
 
 def extract_intervals(
-    df: DataFrame,
-    dt_col: str = wc.COL_LOG_DATETIME,
-    TOKEN_START: str = wc.TOKEN_START,
-    TOKEN_STOP: str = wc.TOKEN_STOP,
-    logger: Optional[logging.Logger] = None,
+    df: DataFrame, logger: Optional[logging.Logger] = None,
 ):
     def log_error(msg):
         if logger:
@@ -146,18 +142,23 @@ def extract_intervals(
     intervals = []
     last_start: Optional[datetime] = None
     for i, row in df.iterrows():
-        if row[wc.COL_TYPE] == TOKEN_START:
+        if row[wc.COL_TYPE] == wc.TOKEN_START:
             if last_start is not None:
                 log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
-            last_start = row[dt_col]
-        elif row[wc.COL_TYPE] == TOKEN_STOP:
+            last_start = row[wc.COL_LOG_DATETIME]
+        elif row[wc.COL_TYPE] == wc.TOKEN_STOP:
             if last_start is None:
                 log_error("No start entry found. Skip entry.")
                 continue  # skip this entry
-            td = row[dt_col] - last_start
+            td = row[wc.COL_LOG_DATETIME] - last_start
             d = last_start.date()
             intervals.append(
-                {"date": d, "start": last_start, "stop": row[dt_col], "interval": td}
+                {
+                    "date": d,
+                    "start": last_start,
+                    "stop": row[wc.COL_LOG_DATETIME],
+                    "interval": td,
+                }
             )
             last_start = None
         else:
@@ -166,7 +167,7 @@ def extract_intervals(
     if last_start is not None:
         log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
 
-    return DataFrame(intervals)
+    return DataFrame(intervals, columns=["date", "start", "stop", "interval"])
 
 
 def get_pager() -> Optional[str]:
