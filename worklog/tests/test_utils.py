@@ -444,4 +444,42 @@ class TestUtils(unittest.TestCase):
         expected = DataFrame(columns=["date", "start", "stop", "interval"])
 
         pd.testing.assert_frame_equal(actual, expected)
-        mock_logger.error.assert_called_once()
+        mock_logger.error.assert_called_once_with("No start entry found. Skip entry.")
+
+    def test_extract_intervals_invalid_stop_missing(self):
+        mock_logger = Mock(logging.Logger)
+        df = read_log_sample("tasks_open_interval")
+
+        actual = extract_intervals(df, logger=mock_logger)
+        expected = DataFrame(
+            {
+                "date": [date(2020, 1, 1)],
+                "start": [datetime(2020, 1, 1, 0, tzinfo=timezone.utc)],
+                "stop": [datetime(2020, 1, 1, 1, tzinfo=timezone.utc)],
+                "interval": [timedelta(hours=1)],
+            }
+        )
+
+        pd.testing.assert_frame_equal(actual, expected)
+        mock_logger.error.assert_called_once_with(
+            "Start entry at 2020-01-01 01:30:00+00:00 has no stop entry. Skip entry."
+        )
+
+    def test_extract_intervals_invalid_unknown_type(self):
+        mock_logger = Mock(logging.Logger)
+        df = read_log_sample("tasks_invalid_type")
+
+        actual = extract_intervals(df, logger=mock_logger)
+        expected = DataFrame(
+            {
+                "date": [date(2020, 1, 1)],
+                "start": [datetime(2020, 1, 1, 0, tzinfo=timezone.utc)],
+                "stop": [datetime(2020, 1, 1, 1, tzinfo=timezone.utc)],
+                "interval": [timedelta(hours=1)],
+            }
+        )
+
+        pd.testing.assert_frame_equal(actual, expected)
+        mock_logger.error.assert_called_once_with(
+            "Found unknown type 'unknown'. Skip entry."
+        )

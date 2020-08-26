@@ -162,7 +162,7 @@ def extract_intervals(
             )
             last_start = None
         else:
-            log_error(f"Found unknown type {row['type']}. Skip entry.")
+            log_error(f"Found unknown type '{row['type']}'. Skip entry.")
             continue
     if last_start is not None:
         log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
