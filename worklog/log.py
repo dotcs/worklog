@@ -20,7 +20,6 @@ from worklog.utils import (
     extract_intervals,
     format_timedelta,
     get_active_task_ids,
-    get_all_task_ids,
     get_all_task_ids_with_duration,
     get_datetime_cols_from_schema,
     get_pager,
@@ -92,10 +91,12 @@ class Log(object):
         and are stored in the logfile."""
         task_df = self._log_df[self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK]
         sys.stdout.write("These tasks are listed in the log:\n")
-        for task_id in sorted(task_df[COL_TASK_IDENTIFIER].unique()):
+        for task_id in sorted(task_df[wc.COL_TASK_IDENTIFIER].unique()):
             sys.stdout.write(f"{task_id}\n")
 
-    def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
+    def log(
+        self, n: int, use_pager: bool, filter_category: Optional[List[str]]
+    ) -> None:
         """Display the content of the logfile."""
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
@@ -215,8 +216,11 @@ class Log(object):
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
 
-        all_touched_tasks = get_all_task_ids_with_duration(self._log_df, query_date)
-        active_tasks = get_active_task_ids(self._log_df, query_date)
+        date_mask = self._log_df["date"] == query_date
+        task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        sel_task_mask = date_mask & task_mask
+        all_touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
+        active_tasks = get_active_task_ids(self._log_df[sel_task_mask])
 
         lines = [
             ("Status", "Tracking {status}"),
@@ -255,14 +259,15 @@ class Log(object):
     def stop_active_tasks(self, log_dt: datetime):
         """Stop all active tasks by commiting changes to the logfile."""
         query_date = log_dt.date()
-        active_task_ids = get_active_task_ids(self._log_df, query_date)
+        date_mask = self._log_df["date"] == query_date
+        active_task_ids = get_active_task_ids(self._log_df[date_mask])
         for task_id in active_task_ids:
             self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
 
     def task_report(self, task_id):
         """Generate a report of a given task."""
-        task_mask = self._log_df[COL_CATEGORY] == TOKEN_TASK
-        task_id_mask = self._log_df[COL_TASK_IDENTIFIER] == task_id
+        task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        task_id_mask = self._log_df[wc.COL_TASK_IDENTIFIER] == task_id
         mask = task_mask & task_id_mask
         task_df = self._log_df[mask]
 
@@ -364,7 +369,8 @@ class Log(object):
 
         # Test if there are running tasks
         if category == wc.TOKEN_SESSION:
-            active_tasks = get_active_task_ids(self._log_df, log_dt.date())
+            date_mask = self._log_df["date"] == log_dt.date()
+            active_tasks = get_active_task_ids(self._log_df[date_mask])
             if len(active_tasks) > 0:
                 if not force:
                     msg = self._err_msg_commit_active_tasks.format(
@@ -514,7 +520,7 @@ class Log(object):
     def _aggregate_time(self, mask, resample="D"):
         df = self._aggregate_base(mask, keep_cols=["date"])
         df_day = (
-            df.set_index(COL_LOG_DATETIME)
+            df.set_index(wc.COL_LOG_DATETIME)
             .resample(resample)
             .sum()
             .reset_index()
@@ -525,12 +531,12 @@ class Log(object):
     def _aggregate_tasks(self, mask):
         df = calc_task_durations(
             self._log_df[mask],
-            keep_cols=[COL_LOG_DATETIME, COL_TASK_IDENTIFIER, "time"],
+            keep_cols=[wc.COL_LOG_DATETIME, wc.COL_TASK_IDENTIFIER, "time"],
         )
         df.rename(columns={"time": "agg_time"}, inplace=True)
         return (
-            df.set_index(COL_LOG_DATETIME)
-            .groupby(COL_TASK_IDENTIFIER)
+            df.set_index(wc.COL_LOG_DATETIME)
+            .groupby(wc.COL_TASK_IDENTIFIER)
             .sum()
             .reset_index()
         )

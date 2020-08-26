@@ -176,36 +176,33 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
 
 def _combined_month_or_day_or_week_parser(value: str) -> datetime:
-    if re.match("^\d{4}\-\d{2}$", value):
+    if re.match(r"^\d{4}\-\d{2}$", value):
         return _year_month_parser(value)
-    elif re.match("^\d{4}\-\d{2}\-\d{2}$", value):
+    elif re.match(r"^\d{4}\-\d{2}\-\d{2}$", value):
         return _year_month_day_parser(value)
-    elif re.match("^\d{4}-W\d{2}$", value):
+    elif re.match(r"^\d{4}-W\d{2}$", value):
         return _calendar_week_parser(value)
     raise argparse.ArgumentTypeError(f"{value} is not a valid format")
 
 
 def _year_month_parser(value: str) -> datetime:
-    local_tz = datetime.utcnow().astimezone().tzinfo
-    if not re.match("^\d{4}\-\d{2}$", value):
+    if not re.match(r"^\d{4}\-\d{2}$", value):
         raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM")
     year, month = [int(x) for x in value.split("-")]
-    return datetime(year=year, month=month, day=1, tzinfo=local_tz)
+    return datetime(year=year, month=month, day=1, tzinfo=wc.LOCAL_TIMEZONE)
 
 
 def _year_month_day_parser(value: str) -> datetime:
-    local_tz = datetime.utcnow().astimezone().tzinfo
-    if not re.match("^\d{4}\-\d{2}\-\d{2}$", value):
+    if not re.match(r"^\d{4}\-\d{2}\-\d{2}$", value):
         raise argparse.ArgumentTypeError(f"{value} is not in the format YYYY-MM-DD")
     year, month, day = [int(x) for x in value.split("-")]
-    return datetime(year=year, month=month, day=day, tzinfo=local_tz)
+    return datetime(year=year, month=month, day=day, tzinfo=wc.LOCAL_TIMEZONE)
 
 
 def _calendar_week_parser(value: str) -> datetime:
-    local_tz = datetime.utcnow().astimezone().tzinfo
-    if not re.match("^\d{4}-W\d{2}$", value):
+    if not re.match(r"^\d{4}-W\d{2}$", value):
         raise argparse.ArgumentTypeError(f"{value} is not in the format cwWW")
-    dt = datetime.strptime(value + "-1", "%Y-W%W-%w").replace(tzinfo=local_tz)
+    dt = datetime.strptime(value + "-1", "%Y-W%W-%w").replace(tzinfo=wc.LOCAL_TIMEZONE)
     return dt
 
 

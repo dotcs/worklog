@@ -29,7 +29,7 @@ def format_timedelta(td: timedelta) -> str:
         hours, remainder = divmod(total_secs, 3600)
         minutes, seconds = divmod(remainder, 60)
         return "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
-    except ValueError:
+    except (AttributeError, ValueError):
         return "{:02}:{:02}:{:02}".format(0, 0, 0)
 
 
@@ -108,33 +108,23 @@ def _calc_single_task_duration(df: DataFrame, keep_cols: List[str] = []):
     return df_result[keep_cols]
 
 
-def get_all_task_ids(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]]
-    return sorted(df_day[wc.COL_TASK_IDENTIFIER].unique())
+def get_all_task_ids_with_duration(df: DataFrame):
+    df = df[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]].sort_values(
+        by=[wc.COL_LOG_DATETIME]
+    )
+
+    df_h = calc_task_durations(df)
+    s = df_h["time"]
+    s.index = df_h.index.map(lambda k: k[0])
+    return s.to_dict()
 
 
-def get_all_task_ids_with_duration(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[
-        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
-    ].sort_values(by=[wc.COL_LOG_DATETIME])
+def get_active_task_ids(df: DataFrame):
+    df = df[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]].sort_values(
+        by=[wc.COL_LOG_DATETIME]
+    )
 
-    df_h = calc_task_durations(df_day)["time"]
-    df_h.index = df_h.index.map(lambda k: k[0])
-    return df_h.to_dict()
-
-
-def get_active_task_ids(df: DataFrame, query_date: date):
-    df_day = df[df["date"] == query_date]
-    df_day = df_day[df_day.category == "task"]
-    df_day = df_day[
-        [wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]
-    ].sort_values(by=[wc.COL_LOG_DATETIME])
-
-    df_grouped = df_day.groupby(wc.COL_TASK_IDENTIFIER).tail(1)
+    df_grouped = df.groupby(wc.COL_TASK_IDENTIFIER).tail(1)
     return sorted(
         df_grouped[df_grouped[wc.COL_TYPE] == wc.TOKEN_START][
             wc.COL_TASK_IDENTIFIER
@@ -143,11 +133,7 @@ def get_active_task_ids(df: DataFrame, query_date: date):
 
 
 def extract_intervals(
-    df: DataFrame,
-    dt_col: str = wc.COL_LOG_DATETIME,
-    TOKEN_START: str = wc.TOKEN_START,
-    TOKEN_STOP: str = wc.TOKEN_STOP,
-    logger: Optional[logging.Logger] = None,
+    df: DataFrame, logger: Optional[logging.Logger] = None,
 ):
     def log_error(msg):
         if logger:
@@ -156,36 +142,43 @@ def extract_intervals(
     intervals = []
     last_start: Optional[datetime] = None
     for i, row in df.iterrows():
-        if row[wc.COL_TYPE] == TOKEN_START:
+        if row[wc.COL_TYPE] == wc.TOKEN_START:
             if last_start is not None:
                 log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
-            last_start = row[dt_col]
-        elif row[wc.COL_TYPE] == TOKEN_STOP:
+            last_start = row[wc.COL_LOG_DATETIME]
+        elif row[wc.COL_TYPE] == wc.TOKEN_STOP:
             if last_start is None:
                 log_error("No start entry found. Skip entry.")
                 continue  # skip this entry
-            td = row[dt_col] - last_start
+            td = row[wc.COL_LOG_DATETIME] - last_start
             d = last_start.date()
             intervals.append(
-                {"date": d, "start": last_start, "stop": row[dt_col], "interval": td}
+                {
+                    "date": d,
+                    "start": last_start,
+                    "stop": row[wc.COL_LOG_DATETIME],
+                    "interval": td,
+                }
             )
             last_start = None
         else:
-            log_error(f"Found unknown type {row['type']}. Skip entry.")
+            log_error(f"Found unknown type '{row['type']}'. Skip entry.")
             continue
     if last_start is not None:
         log_error(f"Start entry at {last_start} has no stop entry. Skip entry.")
 
-    return DataFrame(intervals)
+    return DataFrame(intervals, columns=["date", "start", "stop", "interval"])
 
 
 def get_pager() -> Optional[str]:
     # Windows comes pre-installed with the 'more' pager.
     # See https://superuser.com/a/426229
     # Unix distributions also have 'more' pre-installed.
-    default_pager = shutil.which("more")
-    if shutil.which("less") is not None:
-        default_pager = "less"
+    more_bin = shutil.which("more")
+    less_bin = shutil.which("less")
+    default_pager = more_bin
+    if less_bin is not None:
+        default_pager = less_bin
     pager = os.getenv("PAGER", default_pager)
     return pager
 
@@ -196,7 +189,7 @@ def _get_or_update_dt(dt: datetime, time: str):
         hour, minute = h_time.hour, h_time.minute
         return dt.replace(hour=hour, minute=minute, second=0)
     except ValueError:
-        h_time = datetime.fromisoformat(time)
+        h_time = datetime.fromisoformat(time).replace(second=0)
         if h_time.tzinfo is None:
             # Set local timezone if not defined explicitly.
             h_time = h_time.replace(tzinfo=wc.LOCAL_TIMEZONE)

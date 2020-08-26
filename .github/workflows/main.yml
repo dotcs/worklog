@@ -21,7 +21,7 @@ jobs:
         pip install -r requirements_test.txt
     - name: Test package
       run: |
-        python -m pytest --cov worklog --cov-report=xml worklog/
+        python -m pytest --cov-config .coveragerc --cov worklog --cov-report=xml worklog/
     - name: Upload pytest test results
       uses: actions/upload-artifact@v1
       with:
