@@ -1,5 +1,7 @@
 # Worklog - Simple CLI util to track work hours
 
+[![codecov](https://codecov.io/gh/dotcs/worklog/branch/develop/graph/badge.svg)](https://codecov.io/gh/dotcs/worklog)
+
 Worklog is a simple and straight-forward tool to track working times via CLI.
 It uses a plain text file as it's storage backend which makes it easy to
 process the logged information with other tools.
