@@ -9,6 +9,7 @@ from pandas import DataFrame, Series  # type: ignore
 from datetime import datetime, date, timezone
 import numpy as np  # type: ignore
 import sys
+from pathlib import Path
 
 import worklog.constants as wc
 from worklog.utils import (
@@ -28,6 +29,27 @@ from worklog.utils import (
     get_pager,
     sentinel_datetime,
 )
+
+SCHEMA = [
+    (wc.COL_COMMIT_DATETIME, "datetime64[ns]",),
+    (wc.COL_LOG_DATETIME, "datetime64[ns]",),
+    (wc.COL_CATEGORY, "object",),
+    (wc.COL_TYPE, "object",),
+    (wc.COL_TASK_IDENTIFIER, "object",),
+]
+
+SCHEMA_COL_NAMES = [col for col, _ in SCHEMA]
+SCHEMA_DATE_COLS = [wc.COL_COMMIT_DATETIME, wc.COL_LOG_DATETIME]
+
+
+def read_log_sample(id: str) -> DataFrame:
+    return pd.read_csv(
+        f"worklog/tests/snapshots/{id}.csv",
+        sep="|",
+        header=None,
+        names=SCHEMA_COL_NAMES,
+        parse_dates=SCHEMA_DATE_COLS,
+    )
 
 
 class TestUtils(unittest.TestCase):
@@ -159,16 +181,7 @@ class TestUtils(unittest.TestCase):
             sentinel_datetime(target_date4, tzinfo=timezone.utc)
 
     def test_calc_task_durations_ordered(self):
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["foo", "foo"],
-                wc.COL_TYPE: ["start", "stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_simple_ordered")
         expected = DataFrame(
             {wc.COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
@@ -178,17 +191,7 @@ class TestUtils(unittest.TestCase):
         pd.testing.assert_frame_equal(actual, expected)
 
     def test_calc_task_durations_open_interval(self):
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["foo", "foo", "foo"],
-                wc.COL_TYPE: ["start", "stop", "start"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_open_interval")
         expected = DataFrame(
             {wc.COL_TASK_IDENTIFIER: ["foo"], "time": [timedelta(hours=1)]}, index=[1]
         )
@@ -198,18 +201,7 @@ class TestUtils(unittest.TestCase):
         pd.testing.assert_frame_equal(actual, expected)
 
     def calc_task_durations_multiple_ordered(self):
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["foo", "foo", "bar", "bar"],
-                wc.COL_TYPE: ["start", "stop", "start", "stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_multiple_ordered")
         expected = DataFrame(
             {
                 wc.COL_TASK_IDENTIFIER: ["bar", "foo"],
@@ -224,27 +216,7 @@ class TestUtils(unittest.TestCase):
         """
         Test if the implementation works if tasks are nested.
         """
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: [
-                    "task1",
-                    "task2",
-                    "task3",
-                    "task2",
-                    "task1",
-                    "task3",
-                ],
-                wc.COL_TYPE: ["start", "start", "start", "stop", "stop", "stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 31, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 3, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_multiple_nested")
         expected = DataFrame(
             {
                 wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task3"],
@@ -268,18 +240,7 @@ class TestUtils(unittest.TestCase):
         order. In this case a stop entry is listed before a start entry
         although the order of the logged time is fine.
         """
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["task2", "task1", "task1", "task2",],
-                wc.COL_TYPE: ["stop", "stop", "start", "start",],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 1, 31, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 30, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_multiple_nested_unordered")
         expected = DataFrame(
             {
                 wc.COL_TASK_IDENTIFIER: ["task1", "task2"],
@@ -293,34 +254,17 @@ class TestUtils(unittest.TestCase):
         pd.testing.assert_frame_equal(actual, expected)
 
     def test_get_all_task_ids_with_duration(self):
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task2", "task1",],
-                wc.COL_TYPE: ["start", "start", "stop", "stop",],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 3, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
-        expected = {"task1": timedelta(hours=3), "task2": timedelta(hours=1)}
+        df = read_log_sample("tasks_multiple_nested")
+        expected = {
+            "task1": timedelta(hours=2),
+            "task2": timedelta(minutes=1),
+            "task3": timedelta(hours=1, minutes=30),
+        }
         actual = get_all_task_ids_with_duration(df)
         self.assertEqual(actual, expected)
 
     def test_get_active_task_ids(self):
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["task1", "task2", "task2"],
-                wc.COL_TYPE: ["start", "start", "stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 2, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_simple_active")
         expected = ["task1"]
         actual = get_active_task_ids(df)
         self.assertEqual(actual, expected)
@@ -477,23 +421,14 @@ class TestUtils(unittest.TestCase):
 
     def test_extract_intervals_valid(self):
         mock_logger = Mock(logging.Logger)
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["foo", "foo"],
-                wc.COL_TYPE: ["start", "stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                    datetime(2020, 1, 1, 1, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_simple_ordered")
 
         actual = extract_intervals(df, logger=mock_logger)
         expected = DataFrame(
             {
                 "date": [date(2020, 1, 1)],
-                "start": [datetime(2020, 1, 1, 0, tzinfo=wc.LOCAL_TIMEZONE)],
-                "stop": [datetime(2020, 1, 1, 1, tzinfo=wc.LOCAL_TIMEZONE)],
+                "start": [datetime(2020, 1, 1, 0, tzinfo=timezone.utc)],
+                "stop": [datetime(2020, 1, 1, 1, tzinfo=timezone.utc)],
                 "interval": [timedelta(hours=1)],
             }
         )
@@ -503,15 +438,7 @@ class TestUtils(unittest.TestCase):
 
     def test_extract_intervals_invalid_start_missing(self):
         mock_logger = Mock(logging.Logger)
-        df = DataFrame(
-            {
-                wc.COL_TASK_IDENTIFIER: ["foo"],
-                wc.COL_TYPE: ["stop"],
-                wc.COL_LOG_DATETIME: [
-                    datetime(2020, 1, 1, 0, 0, 0, 0, wc.LOCAL_TIMEZONE),
-                ],
-            }
-        )
+        df = read_log_sample("tasks_start_missing")
 
         actual = extract_intervals(df, logger=mock_logger)
         expected = DataFrame(columns=["date", "start", "stop", "interval"])
