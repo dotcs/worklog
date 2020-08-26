@@ -94,7 +94,9 @@ class Log(object):
         for task_id in sorted(task_df[wc.COL_TASK_IDENTIFIER].unique()):
             sys.stdout.write(f"{task_id}\n")
 
-    def log(self, n: int, use_pager: bool, filter_category: List[str]) -> None:
+    def log(
+        self, n: int, use_pager: bool, filter_category: Optional[List[str]]
+    ) -> None:
         """Display the content of the logfile."""
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")
