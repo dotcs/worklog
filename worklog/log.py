@@ -16,10 +16,7 @@ import worklog.constants as wc
 from worklog.utils.pager import get_pager
 from worklog.utils.time import calc_log_time
 from worklog.utils.schema import empty_df_from_schema, get_datetime_cols_from_schema
-from worklog.utils.formatting import (
-    format_timedelta,
-    format_numpy_timedelta,
-)
+from worklog.utils.formatting import format_timedelta
 from worklog.utils.tasks import (
     calc_task_durations,
     extract_intervals,
@@ -163,8 +160,8 @@ class Log(object):
             date_max_len = len("2000-01") if date_type == "M" else len("2000-01-01")
             return {
                 wc.COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
-                "agg_time": format_numpy_timedelta,
-                "agg_time_bookable": format_numpy_timedelta,
+                "agg_time": format_timedelta,
+                "agg_time_bookable": format_timedelta,
             }
 
         self._print_aggregation(
