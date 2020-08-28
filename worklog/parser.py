@@ -89,7 +89,6 @@ def _add_task_parser(subparsers: argparse._SubParsersAction):
     task_report_parser.add_argument(
         "id", type=str, help="Task identifier of a recorded task.",
     )
-    _add_timeshift_args(task_report_parser)
 
 
 def _add_status_parser(subparsers: argparse._SubParsersAction):
