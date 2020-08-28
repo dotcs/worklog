@@ -7,7 +7,8 @@ from worklog.breaks import AutoBreak
 import worklog.constants as wc
 from worklog.log import Log
 from worklog.parser import get_arg_parser
-from worklog.utils import calc_log_time, configure_logger
+from worklog.utils.time import calc_log_time
+from worklog.utils.logger import configure_logger
 from worklog.dispatcher import dispatch
 
 

@@ -5,7 +5,7 @@ import json
 
 import worklog.constants as wc
 from worklog.log import Log
-from worklog.utils import calc_log_time
+from worklog.utils.time import calc_log_time
 
 
 def dispatch(

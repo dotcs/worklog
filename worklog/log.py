@@ -13,20 +13,20 @@ import pandas as pd  # type: ignore
 
 from worklog.breaks import AutoBreak
 import worklog.constants as wc
-from worklog.utils import (
-    calc_log_time,
-    check_order_session,
-    empty_df_from_schema,
-    extract_intervals,
+from worklog.utils.pager import get_pager
+from worklog.utils.time import calc_log_time
+from worklog.utils.schema import empty_df_from_schema, get_datetime_cols_from_schema
+from worklog.utils.formatting import (
     format_timedelta,
+    format_numpy_timedelta,
+)
+from worklog.utils.tasks import (
+    calc_task_durations,
+    extract_intervals,
     get_active_task_ids,
     get_all_task_ids_with_duration,
-    get_datetime_cols_from_schema,
-    get_pager,
-    sentinel_datetime,
-    format_numpy_timedelta,
-    calc_task_durations,
 )
+from worklog.utils.session import check_order_session, sentinel_datetime
 
 logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
 
