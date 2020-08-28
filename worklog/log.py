@@ -14,7 +14,7 @@ import pandas as pd  # type: ignore
 from worklog.breaks import AutoBreak
 import worklog.constants as wc
 from worklog.utils.pager import get_pager
-from worklog.utils.time import calc_log_time
+from worklog.utils.time import calc_log_time, extract_date_and_time
 from worklog.utils.schema import empty_df_from_schema, get_datetime_cols_from_schema
 from worklog.utils.formatting import format_timedelta
 from worklog.utils.tasks import (
@@ -329,19 +329,8 @@ class Log(object):
             self._log_df = empty_df_from_schema(self._schema)
 
         self._log_df = pd.concat(
-            [self._log_df, self._extract_date_and_time(self._log_df)], axis=1
+            [self._log_df, extract_date_and_time(self._log_df)], axis=1
         )
-
-    def _extract_date_and_time(
-        self, df: pd.DataFrame, source_col: str = wc.COL_LOG_DATETIME
-    ) -> pd.DataFrame:
-        """
-        Extracts date and time information from a given pandas DataFrame.
-        By default the source column is `log_dt`.
-        """
-        date: pd.Series = df[source_col].apply(lambda x: x.date)
-        time: pd.Series = df[source_col].apply(lambda x: x.time)
-        return pd.DataFrame(dict(date=date, time=time),)
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
@@ -389,7 +378,7 @@ class Log(object):
         ]
 
         record = pd.DataFrame(dict(zip(cols, values)), index=[0],)
-        record_t = pd.concat([record, self._extract_date_and_time(record)], axis=1)
+        record_t = pd.concat([record, extract_date_and_time(record)], axis=1)
 
         # append record to in-memory log
         self._log_df = pd.concat((self._log_df, record_t))

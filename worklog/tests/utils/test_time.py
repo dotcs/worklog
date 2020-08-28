@@ -1,9 +1,12 @@
 import unittest
 from unittest.mock import patch, Mock
-from datetime import datetime, timezone
+from datetime import date, time, datetime, timezone
+from pandas import DataFrame
+import pandas as pd
 
 import worklog.constants as wc
-from worklog.utils.time import _get_or_update_dt, calc_log_time
+from worklog.utils.time import _get_or_update_dt, calc_log_time, extract_date_and_time
+from worklog.tests.utils import read_log_sample
 
 
 class TestDatetimeManipulation(unittest.TestCase):
@@ -73,3 +76,18 @@ class TestDatetimeManipulation(unittest.TestCase):
 
         mock.assert_not_called()
         self.assertEqual(actual, expected)
+
+
+class TestDateTimeExtraction(unittest.TestCase):
+    def test_extraction(self):
+        df = read_log_sample("session_simple")
+
+        expected = DataFrame(
+            {
+                "date": [date(2020, 1, 1), date(2020, 1, 1)],
+                "time": [time(0, 0, 0), time(1, 0, 0)],
+            }
+        )
+        actual = extract_date_and_time(df)
+
+        pd.testing.assert_frame_equal(actual, expected)

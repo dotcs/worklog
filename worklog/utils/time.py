@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime, timedelta, timezone
+import pandas as pd
 
 import worklog.constants as wc
 
@@ -29,3 +30,15 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
         my_date = _get_or_update_dt(my_date, time)
 
     return my_date
+
+
+def extract_date_and_time(
+    df: pd.DataFrame, source_col: str = wc.COL_LOG_DATETIME
+) -> pd.DataFrame:
+    """
+    Extracts date and time information from a given pandas DataFrame.
+    By default the source column is `log_dt`.
+    """
+    date: pd.Series = df[source_col].apply(lambda x: x.date)
+    time: pd.Series = df[source_col].apply(lambda x: x.time)
+    return pd.DataFrame(dict(date=date, time=time),)
