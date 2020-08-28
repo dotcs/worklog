@@ -70,7 +70,7 @@ def _add_task_parser(subparsers: argparse._SubParsersAction):
         "id", type=str, help="Task identifier, can be freely chosen",
     )
     task_start_parser.add_argument(
-        "--auto-close", action="store_true", help=("Auto closes open tasks."),
+        "-ac", "--auto-close", action="store_true", help=("Auto closes open tasks."),
     )
     _add_timeshift_args(task_start_parser)
 
@@ -246,6 +246,7 @@ def _positive_int(value: str) -> int:
 def _add_timeshift_args(parser: argparse.ArgumentParser):
     timeshift_grp = parser.add_mutually_exclusive_group()
     timeshift_grp.add_argument(
+        "-om",
         "--offset-minutes",
         type=float,
         default=0,
@@ -255,4 +256,5 @@ def _add_timeshift_args(parser: argparse.ArgumentParser):
             "values shift it into the past."
         ),
     )
-    timeshift_grp.add_argument("--time", help=_help_time_arg)
+    timeshift_grp.add_argument("-t", "--time", help=_help_time_arg)
+
