@@ -21,6 +21,17 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="subcmd")
 
+    _add_commit_parser(subparsers)
+    _add_task_parser(subparsers)
+    _add_status_parser(subparsers)
+    _add_doctor_parser(subparsers)
+    _add_log_parser(subparsers)
+    _add_report_parser(subparsers)
+
+    return parser
+
+
+def _add_commit_parser(subparsers: argparse._SubParsersAction):
     commit_parser = subparsers.add_parser(
         wc.SUBCMD_COMMIT,
         description=(
@@ -41,6 +52,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="Force command, will auto-stop running tasks.",
     )
 
+
+def _add_task_parser(subparsers: argparse._SubParsersAction):
     task_parser = subparsers.add_parser(
         wc.SUBCMD_TASK,
         description=(
@@ -78,6 +91,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     _add_timeshift_args(task_report_parser)
 
+
+def _add_status_parser(subparsers: argparse._SubParsersAction):
     status_parser = subparsers.add_parser(
         wc.SUBCMD_STATUS,
         description=(
@@ -100,6 +115,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
         "--fmt", type=str, default=None, help="Use a custom formatted string"
     )
 
+
+def _add_doctor_parser(subparsers: argparse._SubParsersAction):
     doctor_parser = subparsers.add_parser(
         wc.SUBCMD_DOCTOR,
         description=(
@@ -108,6 +125,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+
+def _add_log_parser(subparsers: argparse._SubParsersAction):
     log_parser = subparsers.add_parser(
         wc.SUBCMD_LOG,
         description=(
@@ -145,6 +164,8 @@ def get_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+
+def _add_report_parser(subparsers: argparse._SubParsersAction):
     now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
     current_month: str = now.replace(day=1).isoformat()[: len("2000-01-01")]
     next_month: str = (now.replace(day=1) + timedelta(days=31)).replace(
@@ -182,8 +203,6 @@ def get_arg_parser() -> argparse.ArgumentParser:
             "XX referring to the week number, e.g. 35."
         ),
     )
-
-    return parser
 
 
 def _combined_month_or_day_or_week_parser(value: str) -> datetime:
