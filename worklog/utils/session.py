@@ -35,3 +35,13 @@ def sentinel_datetime(
             target_date.year, target_date.month, target_date.day, 23, 59, 59, 0, tzinfo,
         ).astimezone(tz=tzinfo),
     )
+
+
+def is_active_session(df: DataFrame):
+    """
+    Returns True if the last entry in a given pandas DataFrame has the
+    category 'session' and type 'start'.
+
+    Note: Make sure to apply this method only on a sorted DataFrame.
+    """
+    return df.iloc[-1][wc.COL_TYPE] == wc.TOKEN_START if df.shape[0] > 0 else False

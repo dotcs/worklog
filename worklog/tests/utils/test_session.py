@@ -4,7 +4,12 @@ import logging
 from datetime import datetime, date, timezone
 
 from worklog.utils.schema import empty_df_from_schema
-from worklog.utils.session import check_order_session, sentinel_datetime
+from worklog.utils.session import (
+    check_order_session,
+    sentinel_datetime,
+    is_active_session,
+)
+from worklog.tests.utils import read_log_sample
 
 
 class TestSessionOrder(unittest.TestCase):
@@ -98,3 +103,17 @@ class TestSentinelEntries(unittest.TestCase):
         with self.assertRaises(ValueError):
             target_date4 = date(2020, 1, 3)
             sentinel_datetime(target_date4, tzinfo=timezone.utc)
+
+
+class TestSessionActivity(unittest.TestCase):
+    def test_inactive_session(self):
+        df = read_log_sample("session_simple")
+        actual = is_active_session(df)
+
+        self.assertFalse(actual)
+
+    def test_active_session(self):
+        df = read_log_sample("session_simple_open")
+        actual = is_active_session(df)
+
+        self.assertTrue(actual)

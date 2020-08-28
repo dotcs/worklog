@@ -23,7 +23,11 @@ from worklog.utils.tasks import (
     get_active_task_ids,
     get_all_task_ids_with_duration,
 )
-from worklog.utils.session import check_order_session, sentinel_datetime
+from worklog.utils.session import (
+    check_order_session,
+    sentinel_datetime,
+    is_active_session,
+)
 
 logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
 
@@ -207,7 +211,7 @@ class Log(object):
                 sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
             return
 
-        is_active = self._is_active(df_day)
+        is_active = is_active_session(df_day)
         logger.debug(f"Is active: {is_active}")
 
         df_day = self._add_sentinel(query_date, df_day)
@@ -389,17 +393,6 @@ class Log(object):
         # Update sorting of values in-memory.
         self._log_df = self._log_df.sort_values(by=[wc.COL_LOG_DATETIME])
 
-    def _is_active(self, df: pd.DataFrame):
-        """
-        Returns True if the last entry in a given pandas DataFrame has 
-        `type == 'start'`.
-
-        Note: This method does not check for anything else. If this should
-        just be applied to a single category, make sure to filter the pandas
-        DataFrame first.
-        """
-        return df.iloc[-1][wc.COL_TYPE] == wc.TOKEN_START if df.shape[0] > 0 else False
-
     def _check_nonempty_or_exit(self, fmt: Optional[str]):
         """
         Tests if the log file has at least a single value.
@@ -433,7 +426,7 @@ class Log(object):
         return df
 
     def _add_sentinel(self, query_date: date, df: pd.DataFrame):
-        is_active = self._is_active(df)
+        is_active = is_active_session(df)
         ret = df
         if is_active:
             sdt = sentinel_datetime(query_date)
