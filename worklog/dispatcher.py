@@ -25,19 +25,7 @@ def dispatch(
                 force=cli_args.force,
             )
     elif cli_args.subcmd == wc.SUBCMD_TASK:
-        if (
-            "auto_close" in cli_args
-            and cli_args.auto_close == True
-            and cli_args.type != wc.TOKEN_START
-        ):
-            parser.error(
-                f'--auto-close is only allowed if the type is set to "{wc.TOKEN_START}"',
-            )
-            return
         if cli_args.type in [wc.TOKEN_START, wc.TOKEN_STOP]:
-            if cli_args.id is None:
-                parser.error("--id is required when a new task is started/stopped")
-                return
             if cli_args.type == wc.TOKEN_START and cli_args.auto_close:
                 commit_dt = calc_log_time(cli_args.offset_minutes, cli_args.time)
                 log.stop_active_tasks(commit_dt)
@@ -51,9 +39,6 @@ def dispatch(
         elif cli_args.type == "list":
             log.list_tasks()
         elif cli_args.type == "report":
-            if cli_args.id is None:
-                parser.error("--id is required when requesting a report")
-                return
             log.task_report(cli_args.id)
     elif cli_args.subcmd == wc.SUBCMD_STATUS:
         hours_target = float(cfg.get("workday", "hours_target"))

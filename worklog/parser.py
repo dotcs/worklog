@@ -49,23 +49,34 @@ def get_arg_parser() -> argparse.ArgumentParser:
             "Use 'wl commit start' to start a new working session."
         ),
     )
-    task_parser.add_argument(
-        "type",
-        choices=[wc.TOKEN_START, wc.TOKEN_STOP, "list", "report"],
-        help="Starts/stops or list tasks",
+    task_parser_type = task_parser.add_subparsers(dest="type")
+
+    # task start
+    task_start_parser = task_parser_type.add_parser(wc.TOKEN_START)
+    task_start_parser.add_argument(
+        "id", type=str, help="Task identifier, can be freely chosen",
     )
-    task_parser.add_argument(
-        "--id", type=str, help="Task identifier",
+    task_start_parser.add_argument(
+        "--auto-close", action="store_true", help=("Auto closes open tasks."),
     )
-    task_parser.add_argument(
-        "--auto-close",
-        action="store_true",
-        help=(
-            "Auto closes open tasks. "
-            "This flag is only relevant if type is set to 'start'."
-        ),
+    _add_timeshift_args(task_start_parser)
+
+    # task stop
+    task_stop_parser = task_parser_type.add_parser(wc.TOKEN_STOP)
+    task_stop_parser.add_argument(
+        "id", type=str, help="Task identifier of a running task.",
     )
-    _add_timeshift_args(task_parser)
+    _add_timeshift_args(task_stop_parser)
+
+    # task list
+    task_list_parser = task_parser_type.add_parser("list")
+
+    # task report
+    task_report_parser = task_parser_type.add_parser("report")
+    task_report_parser.add_argument(
+        "id", type=str, help="Task identifier of a recorded task.",
+    )
+    _add_timeshift_args(task_report_parser)
 
     status_parser = subparsers.add_parser(
         wc.SUBCMD_STATUS,
@@ -226,4 +237,3 @@ def _add_timeshift_args(parser: argparse.ArgumentParser):
         ),
     )
     timeshift_grp.add_argument("--time", help=_help_time_arg)
-

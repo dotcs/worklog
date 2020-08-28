@@ -78,36 +78,6 @@ class TestDispatchCommit(unittest.TestCase):
 @patch("argparse.ArgumentParser")
 @patch("worklog.log")
 class TestDispatchTask(unittest.TestCase):
-    def test_auto_close_and_stop(self, mock_log, mock_parser, mock_cfg):
-        """
-        It should not be possible to use the `auto_close` flag with the 'stop' type.
-        """
-        ns = Namespace(subcmd="task", type="stop", auto_close=True)
-        dispatch(mock_log, mock_parser, ns, mock_cfg)
-
-        mock_log.commit.assert_not_called()
-        mock_parser.error.assert_called_once()
-
-    def test_start_no_id(self, mock_log, mock_parser, mock_cfg):
-        """It should not be possible to start a task when no id is present"""
-        ns = Namespace(subcmd="task", type="start", auto_close=False, id=None)
-        dispatch(mock_log, mock_parser, ns, mock_cfg)
-
-        mock_log.commit.assert_not_called()
-        mock_parser.error.assert_called_once_with(
-            "--id is required when a new task is started/stopped"
-        )
-
-    def test_stop_no_id(self, mock_log, mock_parser, mock_cfg):
-        """It should not be possible to stop a task when no id is present"""
-        ns = Namespace(subcmd="task", type="stop", auto_close=False, id=None)
-        dispatch(mock_log, mock_parser, ns, mock_cfg)
-
-        mock_log.commit.assert_not_called()
-        mock_parser.error.assert_called_once_with(
-            "--id is required when a new task is started/stopped"
-        )
-
     def test_start(self, mock_log, mock_parser, mock_cfg):
         """It should be possible to start a new task"""
         ns = Namespace(
@@ -168,19 +138,6 @@ class TestDispatchTask(unittest.TestCase):
         dispatch(mock_log, mock_parser, ns, mock_cfg)
 
         mock_log.list_tasks.assert_called_once()
-
-    def test_report_task_id_missing(self, mock_log, mock_parser, mock_cfg):
-        """
-        It should not be possible to report infos about a single task if id
-        is missing.
-        """
-        ns = Namespace(subcmd="task", type="report", id=None)
-        dispatch(mock_log, mock_parser, ns, mock_cfg)
-
-        mock_parser.error.assert_called_once_with(
-            "--id is required when requesting a report"
-        )
-        mock_log.task_report.assert_not_called()
 
     def test_report_task_by_id(self, mock_log, mock_parser, mock_cfg):
         """It should be possible to report infos about a single task id."""
