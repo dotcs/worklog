@@ -6,7 +6,8 @@ from datetime import datetime, date, timedelta, timezone
 import logging
 
 import worklog.constants as wc
-from worklog.tests.utils import read_log_sample
+from worklog.tests.utils import read_log_sample, SCHEMA
+from worklog.utils.schema import empty_df_from_schema
 from worklog.utils.tasks import (
     _calc_single_task_duration,
     calc_task_durations,
@@ -17,6 +18,12 @@ from worklog.utils.tasks import (
 
 
 class TestTaskIds(unittest.TestCase):
+    def test_get_all_task_ids_with_duration_empty(self):
+        df = empty_df_from_schema(SCHEMA)
+        expected = {}
+        actual = get_all_task_ids_with_duration(df)
+        self.assertEqual(actual, expected)
+
     def test_get_all_task_ids_with_duration(self):
         df = read_log_sample("tasks_multiple_nested")
         expected = {
