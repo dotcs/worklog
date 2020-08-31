@@ -8,7 +8,7 @@ import worklog.constants as wc
 
 def calc_task_durations(
     df: DataFrame, keep_cols: List[str] = [wc.COL_TASK_IDENTIFIER, "time"]
-):
+) -> DataFrame:
     return df.groupby(wc.COL_TASK_IDENTIFIER).apply(
         lambda group: _calc_single_task_duration(group, keep_cols=keep_cols)
     )
@@ -39,6 +39,8 @@ def get_all_task_ids_with_duration(df: DataFrame):
     )
 
     df_h = calc_task_durations(df)
+    if df_h.empty:
+        return {}
     s = df_h["time"]
     s.index = df_h.index.map(lambda k: k[0])
     return s.to_dict()
