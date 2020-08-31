@@ -1,14 +1,28 @@
 import unittest
 from datetime import timedelta
 import numpy as np
+import pandas as pd
 
 from worklog.utils.formatting import format_timedelta
 
 
 class TestTimeFormatting(unittest.TestCase):
-    def test_invalid_value(self):
-        td = None
+    def test_invalid_value_none(self):
         expected = "00:00:00"
+
+        td = None
+        actual = format_timedelta(td)
+        self.assertEqual(expected, actual)
+
+    def test_invalid_value_nat(self):
+        expected = "00:00:00"
+        td = pd.NaT
+        actual = format_timedelta(td)
+        self.assertEqual(expected, actual)
+
+    def test_invalid_value_nan(self):
+        expected = "00:00:00"
+        td = np.nan
         actual = format_timedelta(td)
         self.assertEqual(expected, actual)
 
