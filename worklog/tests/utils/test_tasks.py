@@ -34,9 +34,21 @@ class TestTaskIds(unittest.TestCase):
         actual = get_all_task_ids_with_duration(df)
         self.assertEqual(actual, expected)
 
-    def test_get_active_task_ids(self):
+    def test_get_active_task_ids_empty(self):
+        df = empty_df_from_schema(SCHEMA)
+        expected = []
+        actual = get_active_task_ids(df)
+        self.assertEqual(actual, expected)
+
+    def test_get_active_task_ids_single(self):
         df = read_log_sample("tasks_simple_active")
         expected = ["task1"]
+        actual = get_active_task_ids(df)
+        self.assertEqual(actual, expected)
+
+    def test_get_active_task_ids_multiple(self):
+        df = read_log_sample("tasks_multiple_started")
+        expected = ["task1", "task3"]
         actual = get_active_task_ids(df)
         self.assertEqual(actual, expected)
 
