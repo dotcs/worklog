@@ -1,11 +1,12 @@
 from typing import Union, Optional
 from datetime import timedelta
+import pandas as pd
 import numpy as np
 from math import floor
 
 
 def format_timedelta(value: Optional[Union[timedelta, np.timedelta64]]) -> str:
-    if value is None:
+    if value is None or value is pd.NaT or value is np.nan:
         return "{:02}:{:02}:{:02}".format(0, 0, 0)
     elif isinstance(value, timedelta):
         return _format_timedelta_py(value)
