@@ -48,7 +48,9 @@ def get_all_task_ids_with_duration(df: DataFrame):
 
 def get_active_task_ids(df: DataFrame):
     """
-    Returns a list of active tasks
+    Returns a list of active tasks.
+    Note: This method can only handle DataFrames that have entries where the
+    category is set to 'task'.
     """
     df = df[[wc.COL_LOG_DATETIME, wc.COL_TYPE, wc.COL_TASK_IDENTIFIER]].sort_values(
         by=[wc.COL_LOG_DATETIME]
