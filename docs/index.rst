@@ -21,6 +21,13 @@ The following chapters will explain worklog in detail:
    :maxdepth: 1
 
    Quickstart <text/quickstart>
+   Sessions <text/sessions>
+   Tasks <text/tasks>
+   Logs <text/logs>
+   Reports <text/reports>
+   Integrity Checks <text/integrity>
+   Integration into Status Bars <text/status-bars>
+   Automatic Break Handling <text/auto-breaks>
    License <license>
 
 
