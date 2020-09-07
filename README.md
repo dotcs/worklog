@@ -101,7 +101,7 @@ ERROR:worklog:Date 2020-04-08 has no stop entry.
 Clone this repository and install the development version:
 
 ```bash
-pip install -e ".[testing]"
+pip install -e ".[develop]"
 ```
 
 Run tests via
