@@ -17,10 +17,10 @@ The following starts and stops a new task.
 It is assumed that this happens during a running
 :ref:`Session<sessions-label>`.
 
-.. code:: shell
+.. code:: console
 
-    wl task start orga-mails    # starts tracking of a task
-    wl task stop orga-mails     # stops tracking of a task
+    $ wl task start orga-mails    # starts tracking of a task
+    $ wl task stop orga-mails     # stops tracking of a task
 
 Similar to :ref:`sessions-label` the flags ``--offset-minutes`` and
 ``--time`` can be used to use an offset or absolute time value for the new
@@ -30,21 +30,21 @@ Because often the open tasks should be stopped when starting a new task, the
 ``--auto-close`` flag can be used when starting a new task.
 This automatically stops all other running tasks.
 
-.. code:: shell
+.. code:: console
 
-    wl task start task1 --offset-minutes -10
-    wl task start task2 --auto-close          # will close task1 first and then start task2
+    $ wl task start task1 --offset-minutes -10
+    $ wl task start task2 --auto-close          # will close task1 first and then start task2
 
 All previously used task identifiers can be listed.
 
-.. code:: shell
+.. code:: console
 
-    wl task list
+    $ wl task list
 
 Also for each task identifier a report can be generated which will list all
 the occurencies:
 
-::
+.. code:: console
 
     $ wl task report orga-mails
 

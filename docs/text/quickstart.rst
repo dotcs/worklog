@@ -9,9 +9,9 @@ Installation
 As the compiled worklog package is hosted on the Python Package Index (PyPI)
 you can easily install it with pip
 
-.. code:: shell
+.. code:: console
 
-    pip install dcs-worklog
+    $ pip install dcs-worklog
 
 worklog is a CLI tool that registers itself as ``wl``.
 
@@ -22,22 +22,18 @@ By default worklog uses a file ``.worklog`` located in the home directory of
 the user.
 To start a new session use the command 
 
-.. code:: shell
+.. code:: console
 
-    wl commit start
+    $ wl commit start
 
 This creates a new session which is now active.
 To see the status of your tracked work of the current day use the ``status``
 command.
+A summary of the current day will be shown.
 
-.. code:: shell
+.. code:: console
 
-    wl status
-
-A summary of the current day is shown
-
-.. code::
-
+    $ wl status
     Status            : Tracking on
     Total time        : 00:05:04 (  1%)
     Remaining time    : 07:54:56 ( 99%)
@@ -53,7 +49,7 @@ Both rules can be adjusted, see TODO.
 Each CLI command has a ``--help`` flag that can be used to get information
 about all possible parameters and their descriptions, e.g.
 
-.. code::
+.. code:: console
 
     $ wl status --help           
     usage: Worklog status [-h] [--yesterday | --date DATE] [--fmt FMT]
@@ -72,15 +68,15 @@ It is possible to define a different output format for the ``status`` command
 with the ``--fmt`` option.
 This is especially useful when the output of worklog should be embedded into
 a status bar.
-See TODO for more information on the possible options.
+See :ref:`status-bars-label` for more information on the possible options.
 
 While ``wl commit`` starts and ends sessions it is also possible to log tasks.
 Tasks are pieces of work to be done or undertaken during a working session.
 The command is similar
 
-.. code:: shell
+.. code:: console
 
-    wl task start my-task-id
+    $ wl task start my-task-id
 
 where ``my-task-id`` is the identifier of the task that can be chosen freely.
 
@@ -88,8 +84,9 @@ The status of running tasks can be checked with the ``wl status`` command as
 seen above.
 The output covers active and touched tasks.
 
-.. code::
+.. code:: console
 
+    $ wl status
     Status            : Tracking on
     Total time        : 00:14:05 (  3%)
     Remaining time    : 07:45:55 ( 97%)
@@ -100,15 +97,16 @@ The output covers active and touched tasks.
 
 The following command closes a running task
 
-.. code:: shell
+.. code:: console
 
-    wl task stop my-task-id
+    $ wl task stop my-task-id
 
 The status command then no longer shows ``my-task-id`` as a touched task and
 summarizes the time that has been spent on the task today.
 
-.. code::
+.. code:: console
 
+    $ wl status
     Status            : Tracking on
     Total time        : 00:19:09 (  4%)
     Remaining time    : 07:40:51 ( 96%)
@@ -119,15 +117,16 @@ summarizes the time that has been spent on the task today.
 
 Finally the work session can be stopped by using the command
 
-.. code:: shell
+.. code:: console
 
-    wl commit stop
+    $ wl commit stop
 
 The ``status`` command then shows that the current work session has been
 paused.
 
-.. code::
+.. code:: console
 
+    $ wl status
     Status            : Tracking off
     Total time        : 00:21:07 (  4%)
     Remaining time    : 07:38:53 ( 96%)
