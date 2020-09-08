@@ -6,12 +6,12 @@ with open("README.md", "r") as fh:
 with open("requirements.txt", "r") as fh:
     requirements = fh.readlines()
 
-with open("requirements_test.txt", "r") as fh:
-    requirements_test = fh.readlines()
+with open("requirements_develop.txt", "r") as fh:
+    requirements_develop = fh.readlines()
 
 setuptools.setup(
     name="dcs-worklog",
-    version="0.0.30",
+    version="0.0.31",
     author="Fabian Mueller",
     author_email="repository@dotcs.me",
     description="Simple CLI tool to log work and projects",
@@ -28,6 +28,6 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     install_requires=requirements,
-    extras_require={"testing": requirements_test},
+    extras_require={"develop": requirements_develop},
     entry_points={"console_scripts": ["wl=worklog:run",]},
 )

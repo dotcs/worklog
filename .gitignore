@@ -6,3 +6,5 @@ build/
 .mypy_cache/
 .coverage
 coverage.xml
+docs/_build/
+

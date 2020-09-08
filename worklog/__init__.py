@@ -2,6 +2,7 @@ import os
 from configparser import ConfigParser
 from io import StringIO
 import json
+import pkg_resources
 
 from worklog.breaks import AutoBreak
 import worklog.constants as wc
@@ -10,6 +11,12 @@ from worklog.parser import get_arg_parser
 from worklog.utils.time import calc_log_time
 from worklog.utils.logger import configure_logger
 from worklog.dispatcher import dispatch
+
+
+try:
+    __version__ = pkg_resources.get_distribution("dcs-" + __name__).version
+except Exception:
+    __version__ = "unknown"
 
 
 def run() -> None:
