@@ -29,7 +29,8 @@ Alternatively absolute times can also be used:
 
     $ wl commit start --time 08:15   # starting time is today at 08:15
 
-If an entry should be created for a different day an ISO 8601 formatted
+If an entry should be created for a different day an `ISO
+8601 <https://en.wikipedia.org/wiki/ISO_8601>`_ formatted
 string should be used.
 
 .. code:: console
