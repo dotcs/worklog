@@ -27,8 +27,9 @@ The following chapters will explain worklog in detail:
    Reports <text/reports>
    Integrity Checks <text/integrity>
    Integration into Status Bars <text/status-bars>
+   Configuration Files <text/config-files>
    Automatic Break Handling <text/auto-breaks>
-   License <license>
+   License <text/license>
 
 
 Indices and tables

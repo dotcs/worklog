@@ -44,7 +44,7 @@ A summary of the current day will be shown.
 
 By default worklog assumes that a working day has 8 hours.
 It has a soft limit of 10 hours.
-Both rules can be adjusted, see TODO.
+Both rules can be adjusted, see section :ref:`config-files-label`.
 
 Each CLI command has a ``--help`` flag that can be used to get information
 about all possible parameters and their descriptions, e.g.
