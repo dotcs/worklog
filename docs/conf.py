@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = "worklog"
+project = "dcs-worklog"
 copyright = "2020, Fabian Mueller"
 author = "Fabian Mueller"
 
