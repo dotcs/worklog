@@ -20,7 +20,8 @@ be used:
 
 .. code:: shell
 
-    wl commit start --offset-minutes -15  # starting time is now minus 15 minutes
+    wl commit start --offset-minutes -15  # starting time is now minus 15 minutes (in the past)
+    wl commit start --offset-minutes +15  # starting time is now plus 15 minutes (in the future)
 
 Alternatively absolute times can also be used:
 
