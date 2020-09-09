@@ -70,7 +70,10 @@ def _add_task_parser(subparsers: argparse._SubParsersAction):
         "id", type=str, help="Task identifier, can be freely chosen",
     )
     task_start_parser.add_argument(
-        "-ac", "--auto-close", action="store_true", help=("Auto closes open tasks."),
+        "-as",
+        "--auto-stop",
+        action="store_true",
+        help=("Automatically stops open tasks."),
     )
     _add_timeshift_args(task_start_parser)
 
