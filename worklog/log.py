@@ -49,12 +49,12 @@ class Log(object):
 
     # Error messages
     _err_msg_empty_log = (
-        "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
+        "Fatal: No log data available. Start a new log entry with 'wl session start'.\n"
     )
     _err_msg_empty_log_short = "N/A"
     _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_commit_active_tasks = (
+    _err_msg_session_active_tasks = (
         "Fatal. Cannot stop, because tasks are still running. "
         "Stop running tasks first: {active_tasks:} or use --force flag.\n"
     )
@@ -367,7 +367,7 @@ class Log(object):
             active_tasks = get_active_task_ids(self._log_df[mask])
             if len(active_tasks) > 0:
                 if not force:
-                    msg = self._err_msg_commit_active_tasks.format(
+                    msg = self._err_msg_session_active_tasks.format(
                         active_tasks=active_tasks
                     )
                     sys.stderr.write(msg)

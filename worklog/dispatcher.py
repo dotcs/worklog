@@ -15,7 +15,7 @@ def dispatch(
     Dispatch request to Log instance based on CLI arguments and
     configuration values.
     """
-    if cli_args.subcmd == wc.SUBCMD_COMMIT:
+    if cli_args.subcmd == wc.SUBCMD_SESSION:
         if cli_args.type in [wc.TOKEN_START, wc.TOKEN_STOP]:
             log.commit(
                 wc.TOKEN_SESSION,

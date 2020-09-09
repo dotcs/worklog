@@ -24,7 +24,7 @@ To start a new session use the command
 
 .. code:: console
 
-    $ wl commit start
+    $ wl session start
 
 This creates a new session which is now active.
 To see the status of your tracked work of the current day use the ``status``
@@ -70,7 +70,7 @@ This is especially useful when the output of worklog should be embedded into
 a status bar.
 See :ref:`status-bars-label` for more information on the possible options.
 
-While ``wl commit`` starts and ends sessions it is also possible to log tasks.
+While ``wl session`` starts and ends sessions it is also possible to log tasks.
 Tasks are pieces of work to be done or undertaken during a working session.
 The command is similar
 
@@ -119,7 +119,7 @@ Finally the work session can be stopped by using the command
 
 .. code:: console
 
-    $ wl commit stop
+    $ wl session stop
 
 The ``status`` command then shows that the current work session has been
 paused.

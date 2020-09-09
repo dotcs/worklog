@@ -10,10 +10,10 @@ from worklog.dispatcher import dispatch
 @patch("configparser.ConfigParser")
 @patch("argparse.ArgumentParser")
 @patch("worklog.log")
-class TestDispatchCommit(unittest.TestCase):
+class TestDispatchSession(unittest.TestCase):
     def test_invalid(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit",
+            subcmd="session",
             type="invalid_value",
             offset_minutes=0,
             time=None,
@@ -25,7 +25,7 @@ class TestDispatchCommit(unittest.TestCase):
 
     def test_start(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit", type="start", offset_minutes=0, time=None, force=False
+            subcmd="session", type="start", offset_minutes=0, time=None, force=False
         )
         dispatch(mock_log, mock_parser, ns, mock_cfg)
 
@@ -35,7 +35,7 @@ class TestDispatchCommit(unittest.TestCase):
 
     def test_stop(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit", type="stop", offset_minutes=0, time=None, force=False
+            subcmd="session", type="stop", offset_minutes=0, time=None, force=False
         )
         dispatch(mock_log, mock_parser, ns, mock_cfg)
 
@@ -43,7 +43,7 @@ class TestDispatchCommit(unittest.TestCase):
 
     def test_start_with_offset(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit", type="stop", offset_minutes=-11, time=None, force=False
+            subcmd="session", type="stop", offset_minutes=-11, time=None, force=False
         )
         dispatch(mock_log, mock_parser, ns, mock_cfg)
 
@@ -53,7 +53,7 @@ class TestDispatchCommit(unittest.TestCase):
 
     def test_start_with_time(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit",
+            subcmd="session",
             type="stop",
             offset_minutes=0,
             time=datetime(2020, 1, 1, tzinfo=timezone.utc),
@@ -67,7 +67,7 @@ class TestDispatchCommit(unittest.TestCase):
 
     def test_start_forced(self, mock_log, mock_parser, mock_cfg):
         ns = Namespace(
-            subcmd="commit", type="stop", offset_minutes=0, time=None, force=True,
+            subcmd="session", type="stop", offset_minutes=0, time=None, force=True,
         )
         dispatch(mock_log, mock_parser, ns, mock_cfg)
 
