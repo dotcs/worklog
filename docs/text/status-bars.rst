@@ -41,10 +41,10 @@ Variables must be wrapped in single curly braces:
 
 .. code:: console
 
-    $ wl status --fmt '{status} | {remaining_time_short} {percentage}%'
+    $ wl status --fmt '{tracking_status} | {remaining_time_short} {percentage_done}%'
     on | 7:38 4%
 
-    $ wl status --fmt '{status} | {active_tasks}'
-    on | (1) [task1, task2]
+    $ wl status --fmt '{tracking_status} | {active_tasks_stats}'
+    on | (2) [task1, task2]
 
 .. _i3-status-rust: https://github.com/greshake/i3status-rust
