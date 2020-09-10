@@ -19,8 +19,8 @@ Variable                     Description
 ===========================  ===========
 ``active_tasks``             List of currently active tasks w/o statistics
 ``active_tasks_stats``       Similar to ``active_tasks``, but with statistics (counter)
-``all_touched_tasks``        List of all tasks that have been touched w/o statistics
-``all_touched_tasks_stats``  Similar to ``all_touched_tasks``, but with statistics (counter, summed time)
+``touched_tasks``            List of all tasks that have been touched w/o statistics
+``touched_tasks_stats``      Similar to ``all_touched_tasks``, but with statistics (counter, summed time)
 ``break_duration``           Calculated break duration (see :ref:`auto-breaks-label`) (HH:MM:SS)
 ``break_duration_short``     Similar to ``break_duration``, but w/o seconds (HH:MM)
 ``eow``                      Calculated end of the working day (HH:MM:SS)

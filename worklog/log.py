@@ -220,7 +220,7 @@ class Log(object):
         date_mask = self._log_df["date"] == query_date
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
         sel_task_mask = date_mask & task_mask
-        all_touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
+        touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
         active_tasks = get_active_task_ids(self._log_df[sel_task_mask])
 
         lines = [
@@ -229,7 +229,7 @@ class Log(object):
             ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
             ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
             ("Break Duration", "{break_duration}"),
-            ("All touched tasks", "{all_touched_tasks_stats}",),
+            ("Touched tasks", "{touched_tasks_stats}",),
             ("Active tasks", "{active_tasks_stats}",),
         ]
 
@@ -248,13 +248,10 @@ class Log(object):
                 active_tasks_stats=f"({len(active_tasks)}) ["
                 + ", ".join(active_tasks)
                 + "]",
-                all_touched_tasks=", ".join(all_touched_tasks.keys()),
-                all_touched_tasks_stats=f"({len(all_touched_tasks)}) ["
+                touched_tasks=", ".join(touched_tasks.keys()),
+                touched_tasks_stats=f"({len(touched_tasks)}) ["
                 + ", ".join(
-                    [
-                        f"{k} ({format_timedelta(v)})"
-                        for k, v in all_touched_tasks.items()
-                    ]
+                    [f"{k} ({format_timedelta(v)})" for k, v in touched_tasks.items()]
                 )
                 + "]",
                 tracking_status="on" if is_active else "off",
