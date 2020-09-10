@@ -26,7 +26,7 @@ def dispatch(
             )
     elif cli_args.subcmd == wc.SUBCMD_TASK:
         if cli_args.type in [wc.TOKEN_START, wc.TOKEN_STOP]:
-            if cli_args.type == wc.TOKEN_START and cli_args.auto_close:
+            if cli_args.type == wc.TOKEN_START and cli_args.auto_stop:
                 commit_dt = calc_log_time(cli_args.offset_minutes, cli_args.time)
                 log.stop_active_tasks(commit_dt)
             log.commit(

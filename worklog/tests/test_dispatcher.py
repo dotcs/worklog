@@ -83,7 +83,7 @@ class TestDispatchTask(unittest.TestCase):
         ns = Namespace(
             subcmd="task",
             type="start",
-            auto_close=False,
+            auto_stop=False,
             offset_minutes=0,
             time=None,
             id="foobar",
@@ -100,7 +100,7 @@ class TestDispatchTask(unittest.TestCase):
         ns = Namespace(
             subcmd="task",
             type="stop",
-            auto_close=False,
+            auto_stop=False,
             offset_minutes=0,
             time=None,
             id="foobar",
@@ -112,15 +112,15 @@ class TestDispatchTask(unittest.TestCase):
             "task", "stop", 0, None, identifier="foobar"
         )
 
-    def test_start_with_auto_close(self, mock_log, mock_parser, mock_cfg):
+    def test_start_with_auto_stop(self, mock_log, mock_parser, mock_cfg):
         """
-        It should be possible to start a new task and auto close all
+        It should be possible to start a new task and auto stop all
         currently runnning tasks.
         """
         ns = Namespace(
             subcmd="task",
             type="start",
-            auto_close=True,
+            auto_stop=True,
             offset_minutes=0,
             time=None,
             id="foobar",
