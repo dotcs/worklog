@@ -14,23 +14,28 @@ It has been tested with the following status bars.
 Formatting can be customized with the ``--fmt`` flag.
 The following parameters are available:
 
-==================== ===========
-Variable             Description
-==================== ===========
-active_tasks         List of currently active tasks
-all_touched_tasks    List of all tasks that have been touched
-break_duration       Calculated break duration (see :ref:`auto-breaks-label`)
-end_of_work          Calculated end of the working day
-overtime             Number of overtime hours worked on this day
-overtime_short       Short version of overtime (w/o seconds)
-percentage           Percentage of hours worked measured against the target value
-percentage_overtime  Percentage of overtime hours worked measured against the soft limit (w/o percent sign)
-percentage_remaining Percentage of hours to work until the target value is reached (w/o percent sign)
-remaining_time       Time remaining until the end of the working day
-remaining_time_short Time remaining until the end of the working day (w/o seconds)
-status               Current tracking status ('on' or 'off')
-total_time           Total working time
-==================== ===========
+===========================  ===========
+Variable                     Description
+===========================  ===========
+``active_tasks``             List of currently active tasks w/o statistics
+``active_tasks_stats``       Similar to ``active_tasks``, but with statistics (counter)
+``all_touched_tasks``        List of all tasks that have been touched w/o statistics
+``all_touched_tasks_stats``  Similar to ``all_touched_tasks``, but with statistics (counter, summed time)
+``break_duration``           Calculated break duration (see :ref:`auto-breaks-label`) (HH:MM:SS)
+``break_duration_short``     Similar to ``break_duration``, but w/o seconds (HH:MM)
+``eow``                      Calculated end of the working day (HH:MM:SS)
+``eow_short``                Similar to ``eow``, but w/o seconds (HH:MM)
+``overtime``                 Number of overtime hours worked on this day (HH:MM:SS)
+``overtime_short``           Similar to ``overtime``, but w/o seconds (HH:MM)
+``percentage_done``          Percentage of hours worked measured against the target value (w/o percent sign)
+``percentage_overtime``      Percentage of overtime hours worked measured against the soft limit (w/o percent sign)
+``percentage_remaining``     Percentage of hours to work until the target value is reached (w/o percent sign)
+``remaining_time``           Time remaining until the end of the working day (HH:MM:SS)
+``remaining_time_short``     Similar to ``remaining_time``, but w/o seconds (HH:MM)
+``total_time``               Total working time (HH:MM:SS)
+``total_time_short``         Similar to ``total_time``, but w/o seconds (HH:MM)
+``tracking_status``          Current tracking status ('on' or 'off')
+===========================  ===========
 
 Variables must be wrapped in single curly braces:
 
