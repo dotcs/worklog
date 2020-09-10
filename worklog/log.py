@@ -49,12 +49,12 @@ class Log(object):
 
     # Error messages
     _err_msg_empty_log = (
-        "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
+        "Fatal: No log data available. Start a new log entry with 'wl session start'.\n"
     )
     _err_msg_empty_log_short = "N/A"
     _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_commit_active_tasks = (
+    _err_msg_session_active_tasks = (
         "Fatal. Cannot stop, because tasks are still running. "
         "Stop running tasks first: {active_tasks:} or use --force flag.\n"
     )
@@ -220,21 +220,21 @@ class Log(object):
         date_mask = self._log_df["date"] == query_date
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
         sel_task_mask = date_mask & task_mask
-        all_touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
+        touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
         active_tasks = get_active_task_ids(self._log_df[sel_task_mask])
 
         lines = [
-            ("Status", "Tracking {status}"),
-            ("Total time", "{total_time} ({percentage:3}%)"),
+            ("Status", "Tracking {tracking_status}"),
+            ("Total time", "{total_time} ({percentage_done:3}%)"),
             ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
             ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
             ("Break Duration", "{break_duration}"),
-            ("All touched tasks", "{all_touched_tasks}",),
-            ("Active tasks", "{active_tasks}",),
+            ("Touched tasks", "{touched_tasks_stats}",),
+            ("Active tasks", "{active_tasks_stats}",),
         ]
 
         if is_active and date == "today":
-            lines += [("End of work", facts["end_time_str"],)]
+            lines += [("End of work", "{eow}",)]
 
         key_max_len = max([len(line[0]) for line in lines])
         fmt_string = "{:" + str(key_max_len + 1) + "s}: {}"
@@ -244,16 +244,17 @@ class Log(object):
         sys.stdout.write(
             (stdout_fmt if fmt is None else fmt).format(
                 **facts,
-                status="on" if is_active else "off",
-                active_tasks=f"({len(active_tasks)}) [" + ", ".join(active_tasks) + "]",
-                all_touched_tasks=f"({len(all_touched_tasks)}) ["
+                active_tasks=", ".join(active_tasks),
+                active_tasks_stats=f"({len(active_tasks)}) ["
+                + ", ".join(active_tasks)
+                + "]",
+                touched_tasks=", ".join(touched_tasks.keys()),
+                touched_tasks_stats=f"({len(touched_tasks)}) ["
                 + ", ".join(
-                    [
-                        f"{k} ({format_timedelta(v)})"
-                        for k, v in all_touched_tasks.items()
-                    ]
+                    [f"{k} ({format_timedelta(v)})" for k, v in touched_tasks.items()]
                 )
                 + "]",
+                tracking_status="on" if is_active else "off",
             )
         )
 
@@ -367,7 +368,7 @@ class Log(object):
             active_tasks = get_active_task_ids(self._log_df[mask])
             if len(active_tasks) > 0:
                 if not force:
-                    msg = self._err_msg_commit_active_tasks.format(
+                    msg = self._err_msg_session_active_tasks.format(
                         active_tasks=active_tasks
                     )
                     sys.stderr.write(msg)
@@ -449,26 +450,33 @@ class Log(object):
     def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
         shifted_dt = df[wc.COL_LOG_DATETIME].shift(1)
         stop_mask = df[wc.COL_TYPE] == wc.TOKEN_STOP
+
+        # calculate total working time
         total_time = (df[stop_mask][wc.COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
+        # calculate breaks
         break_duration = self.auto_break.get_duration(total_time)
-
+        break_duration_str = format_timedelta(break_duration)
         hours_target_dt = timedelta(hours=hours_target) + break_duration
         hours_max_dt = timedelta(hours=hours_max) + break_duration
 
+        # calculate remaining time
         now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-        end_time = now + (hours_target_dt - total_time)
-        end_time_str = end_time.strftime("%H:%M:%S")
-        remaining_time = max(end_time - now, timedelta(minutes=0))
+        eow_dt = now + (hours_target_dt - total_time)
+        eow_str = eow_dt.strftime("%H:%M:%S")
+        remaining_time = max(eow_dt - now, timedelta(minutes=0))
         remaining_time_str = format_timedelta(remaining_time)
+
+        # calculate overtime
         overtime = max(total_time - hours_target_dt, timedelta(minutes=0))
         overtime_str = format_timedelta(overtime)
 
-        percentage = round(
+        # calculcate percentage values
+        percentage_done = round(
             total_time.total_seconds() / hours_target_dt.total_seconds() * 100
         )
-        percentage_remaining = max(0, 100 - percentage)
+        percentage_remaining = max(0, 100 - percentage_done)
         percentage_overtime = max(
             round(
                 overtime.total_seconds()
@@ -477,17 +485,24 @@ class Log(object):
             ),
             0,
         )
+
+        def _short_hours_str(value: str):
+            return value[: len("00:00")]
+
         return dict(
-            percentage=percentage,
-            end_of_work=end_time_str,
-            total_time=total_time_str,
-            remaining_time=remaining_time_str,
-            remaining_time_short=remaining_time_str[: len("00:00")],
-            percentage_remaining=percentage_remaining,
+            break_duration=break_duration_str,
+            break_duration_short=_short_hours_str(break_duration_str),
+            eow=eow_str,
+            eow_short=_short_hours_str(eow_str),
             overtime=overtime_str,
-            overtime_short=overtime_str[: len("00:00")],
+            overtime_short=_short_hours_str(overtime_str),
+            percentage_done=percentage_done,
             percentage_overtime=percentage_overtime,
-            break_duration=format_timedelta(break_duration),
+            percentage_remaining=percentage_remaining,
+            remaining_time=remaining_time_str,
+            remaining_time_short=_short_hours_str(remaining_time_str),
+            total_time=total_time_str,
+            total_time_short=_short_hours_str(total_time_str),
         )
 
     def _aggregate_base(self, mask, keep_cols: List[str] = []):

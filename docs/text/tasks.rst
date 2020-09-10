@@ -27,13 +27,13 @@ Similar to :ref:`sessions-label` the flags ``--offset-minutes`` and
 entry.
 
 Because often the open tasks should be stopped when starting a new task, the
-``--auto-close`` flag can be used when starting a new task.
+``--auto-stop`` flag can be used when starting a new task.
 This automatically stops all other running tasks.
 
 .. code:: console
 
     $ wl task start task1 --offset-minutes -10
-    $ wl task start task2 --auto-close          # will close task1 first and then start task2
+    $ wl task start task2 --auto-stop           # will close task1 first and then start task2
 
 All previously used task identifiers can be listed.
 
