@@ -13,6 +13,11 @@ def check_order_session(
 ):
     mask_start = df_group[wc.COL_TYPE] == wc.TOKEN_START
     mask_stop = df_group[wc.COL_TYPE] == wc.TOKEN_STOP
+
+    # Roll start_mask series n -> n+1, but keep the index the same.
+    # This can be used to later compare if both, the shifted start_mask series
+    # and the mask_stop series are the same, which must be the case if both
+    # only contain alternating values as it should be in a healthy log.
     shifted_mask_start = Series(np.roll(mask_start.values, 1), index=mask_start.index)
 
     date = df_group.date.iloc[0]
@@ -41,6 +46,9 @@ def check_order_session(
                     type=wc.TOKEN_STOP, date=date, task_id=task_id
                 )
             )
+    # First compare if the first entry is a start entry and then see if both
+    # the shifted_start_mask series and the mask_stop series have the same
+    # values. See above for an explanation.
     elif int(mask_start.iloc[0]) != 1 or not shifted_mask_start.equals(mask_stop):
         if task_id is None:
             pass
