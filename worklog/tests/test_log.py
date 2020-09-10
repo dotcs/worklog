@@ -85,6 +85,7 @@ class TestDoctor(unittest.TestCase):
                         type=wc.TOKEN_STOP, date="2020-01-03"
                     )
                 ),
+                call(ErrMsg.WRONG_SESSION_ORDER.value.format(date="2020-01-07")),
                 call(
                     ErrMsg.MISSING_TASK_ENTRY.value.format(
                         type=wc.TOKEN_STOP, date="2020-01-04", task_id="task4"

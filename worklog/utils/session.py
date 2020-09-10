@@ -51,7 +51,7 @@ def check_order_session(
     # values. See above for an explanation.
     elif int(mask_start.iloc[0]) != 1 or not shifted_mask_start.equals(mask_stop):
         if task_id is None:
-            pass
+            logger.error(ErrMsg.WRONG_SESSION_ORDER.value.format(date=date))
         else:
             logger.error(
                 ErrMsg.WRONG_TASK_ORDER.value.format(date=date, task_id=task_id)

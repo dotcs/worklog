@@ -6,6 +6,9 @@ class ErrMsg(Enum):
         "At least one session has a missing {type} entry on date {date}"
     )
     MISSING_TASK_ENTRY = "Task '{task_id}' is missing a {type} entry on date {date}"
+    WRONG_SESSION_ORDER = (
+        "A session has been closed before it has been started on date {date}"
+    )
     WRONG_TASK_ORDER = (
         "Task '{task_id}' has been closed before it has been stared on date {date}"
     )
