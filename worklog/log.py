@@ -29,8 +29,6 @@ from worklog.utils.session import (
     is_active_session,
 )
 
-logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
-
 
 class Log(object):
     # In-memory representation of log
@@ -61,12 +59,18 @@ class Log(object):
 
     auto_break: AutoBreak = AutoBreak()
 
-    def __init__(self, fp: str, separator: str = "|") -> None:
+    def __init__(
+        self, fp: str, separator: str = "|", logger: Optional[logging.Logger] = None
+    ) -> None:
         self._log_fp = fp
         self._separator = separator
 
         Path(self._log_fp).touch(mode=0o660)
         self._read()
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
 
     def commit(
         self,
@@ -83,8 +87,19 @@ class Log(object):
 
     def doctor(self) -> None:
         """Test if the logfile is consistent."""
-        self._log_df.groupby(["date"]).apply(
-            lambda group: check_order_session(group, logger)
+        mask_session = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_SESSION
+        mask_task = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+
+        # sessions only
+        self._log_df[mask_session].groupby(["date"]).apply(
+            lambda group: check_order_session(group, self.logger)
+        )
+
+        # tasks only
+        self._log_df[mask_task].groupby(["date", "identifier"]).apply(
+            lambda group: check_order_session(
+                group, self.logger, task_id=group[wc.COL_TASK_IDENTIFIER].iloc[0]
+            )
         )
 
     def list_tasks(self):
@@ -114,14 +129,14 @@ class Log(object):
             sys.stdout.write(df.to_string(index=False) + "\n")
         else:
             with tempfile.NamedTemporaryFile(mode="w") as fh:
-                logger.debug(f"Write content to temporary file: {fh.name}")
+                self.logger.debug(f"Write content to temporary file: {fh.name}")
                 fh.write(df.to_string(index=False))
                 fh.flush()
                 pager = get_pager()
                 if pager is None:
                     sys.stdout.write(df.to_string(index=False) + "\n")
                 else:
-                    logger.debug(f"Set pager to {pager}")
+                    self.logger.debug(f"Set pager to {pager}")
                     process = subprocess.Popen([pager, fh.name])
                     process.wait()
 
@@ -212,7 +227,7 @@ class Log(object):
             return
 
         is_active = is_active_session(df_day)
-        logger.debug(f"Is active: {is_active}")
+        self.logger.debug(f"Is active: {is_active}")
 
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
@@ -331,6 +346,7 @@ class Log(object):
                 parse_dates=date_cols,
                 header=None,
                 names=header,
+                comment="#",
             ).sort_values(by=[wc.COL_LOG_DATETIME])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
@@ -444,7 +460,7 @@ class Log(object):
                 index=[0],
             )
             ret = pd.concat((ret, sentinel_df))
-            logger.warning(f"Set sentinel stop value: {sdt}")
+            self.logger.warning(f"Set sentinel stop value: {sdt}")
         return ret
 
     def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):

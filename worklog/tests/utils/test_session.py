@@ -4,11 +4,13 @@ import logging
 from datetime import datetime, date, timezone
 
 from worklog.utils.schema import empty_df_from_schema
+import worklog.constants as wc
 from worklog.utils.session import (
     check_order_session,
     sentinel_datetime,
     is_active_session,
 )
+from worklog.errors import ErrMsg
 from worklog.tests.utils import read_log_sample
 
 
@@ -56,7 +58,9 @@ class TestSessionOrder(unittest.TestCase):
         with patch.object(logger, "error") as mock_error:
             check_order_session(df2, logger)
             mock_error.assert_called_with(
-                '"session" entries on date 2020-01-01 are not ordered correctly.'
+                ErrMsg.MISSING_SESSION_ENTRY.value.format(
+                    type=wc.TOKEN_START, date="2020-01-01"
+                )
             )
 
         # First entry is a 'stop' entry -> Error!
@@ -66,7 +70,9 @@ class TestSessionOrder(unittest.TestCase):
         with patch.object(logger, "error") as mock_error:
             check_order_session(df3, logger)
             mock_error.assert_called_with(
-                'First entry of type "session" on date 2020-01-01 is not "start".'
+                ErrMsg.MISSING_SESSION_ENTRY.value.format(
+                    type=wc.TOKEN_START, date="2020-01-01"
+                )
             )
 
         # Last entry is 'start' and 'stop' entry is missing -> Error!
@@ -75,7 +81,11 @@ class TestSessionOrder(unittest.TestCase):
         df4["time"] = df4["log_dt"].apply(lambda x: x.time())
         with patch.object(logger, "error") as mock_error:
             check_order_session(df4, logger)
-            mock_error.assert_called_with("Date 2020-01-01 has no stop entry.")
+            mock_error.assert_called_with(
+                ErrMsg.MISSING_SESSION_ENTRY.value.format(
+                    type=wc.TOKEN_STOP, date="2020-01-01"
+                )
+            )
 
 
 class TestSentinelEntries(unittest.TestCase):
