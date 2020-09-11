@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 import snapshottest
 
 from worklog.breaks import AutoBreak
@@ -230,7 +230,7 @@ class TestReport(snapshottest.TestCase, TestDataMixin, CapSysMixin):
         date_to = datetime(2020, 3, 1, tzinfo=timezone.utc)
         instance.report(date_from, date_to)
 
-        out, err = self._capsys.readouterr()
+        out, _ = self._capsys.readouterr()
         self.assertMatchSnapshot(out)
 
     def test_report_with_tasks_and_autobreak(self):
@@ -241,7 +241,7 @@ class TestReport(snapshottest.TestCase, TestDataMixin, CapSysMixin):
         date_to = datetime(2020, 3, 1, tzinfo=timezone.utc)
         instance.report(date_from, date_to)
 
-        out, err = self._capsys.readouterr()
+        out, _ = self._capsys.readouterr()
         self.assertMatchSnapshot(out)
 
 
@@ -249,7 +249,7 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
     def test_empty(self):
         fp = self._get_testdata_fp("status_empty")
         instance = Log(fp)
-        query_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        query_date = date(2020, 1, 1)
 
         with self.assertRaises(SystemExit) as err:
             instance.status(8, 10, query_date=query_date)
@@ -264,7 +264,7 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
     def test_empty_with_fmt(self):
         fp = self._get_testdata_fp("status_empty")
         instance = Log(fp)
-        query_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        query_date = date(2020, 1, 1)
 
         with self.assertRaises(SystemExit) as err:
             instance.status(8, 10, query_date=query_date, fmt="{tracking_status}")
@@ -273,3 +273,25 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
         self.assertEqual(out, ErrMsg.NA.value)
 
         self.assertEqual(err.exception.code, 0)
+
+    def test_tracking_on(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_on")
+            instance = Log(fp)
+            query_date = date(2020, 1, 1)
+
+            instance.status(8, 10, query_date=query_date)
+
+        out, _ = self._capsys.readouterr()
+        self.assertMatchSnapshot(out)
+
+    def test_tracking_off(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_off")
+            instance = Log(fp)
+            query_date = date(2020, 1, 1)
+
+            instance.status(8, 10, query_date=query_date)
+
+        out, _ = self._capsys.readouterr()
+        self.assertMatchSnapshot(out)

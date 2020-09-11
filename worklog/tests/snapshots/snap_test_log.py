@@ -64,3 +64,21 @@ Aggregated by tasks:
                task2             17:30:00
 
 '''
+
+snapshots['TestStatus::test_tracking_on 1'] = '''Status         : Tracking on
+Total time     : 23:59:59 (300%)
+Remaining time : 00:00:00 (  0%)
+Overtime       : 15:59:59 (800%)
+Break Duration : 00:00:00
+Touched tasks  : (1) [task1 (01:00:00)]
+Active tasks   : (1) [task2]
+'''
+
+snapshots['TestStatus::test_tracking_off 1'] = '''Status         : Tracking off
+Total time     : 02:00:00 ( 25%)
+Remaining time : 06:00:00 ( 75%)
+Overtime       : 00:00:00 (  0%)
+Break Duration : 00:00:00
+Touched tasks  : (2) [task1 (01:00:00), task2 (01:00:00)]
+Active tasks   : (0) []
+'''

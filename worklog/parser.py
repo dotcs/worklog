@@ -168,7 +168,11 @@ def _add_log_parser(subparsers: argparse._SubParsersAction):
 
 
 def _add_report_parser(subparsers: argparse._SubParsersAction):
-    now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+    now = (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
     current_month: str = now.replace(day=1).isoformat()[: len("2000-01-01")]
     next_month: str = (now.replace(day=1) + timedelta(days=31)).replace(
         day=1

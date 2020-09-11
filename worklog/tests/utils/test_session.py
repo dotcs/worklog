@@ -94,25 +94,26 @@ class TestSentinelEntries(unittest.TestCase):
         mock_datetime.now.return_value = datetime(2020, 1, 2, 1, 33, 7, 0, timezone.utc)
         mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
 
-        # Date is in the past -> Sentinal value is last second on this date
-        target_date1 = date(2019, 1, 1)
-        actual_1 = sentinel_datetime(target_date1, tzinfo=timezone.utc)
-        self.assertEqual(actual_1.isoformat(), "2019-01-01T23:59:59+00:00")
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            # Date is in the past -> Sentinal value is last second on this date
+            target_date1 = date(2019, 1, 1)
+            actual_1 = sentinel_datetime(target_date1)
+            self.assertEqual(actual_1.isoformat(), "2019-01-01T23:59:59+00:00")
 
-        # Date is on the same day as today -> Sentinel value is datetime.now()
-        target_date2 = date(2020, 1, 2)
-        actual_2 = sentinel_datetime(target_date2, tzinfo=timezone.utc)
-        self.assertEqual(actual_2.isoformat(), "2020-01-02T01:33:07+00:00")
+            # Date is on the same day as today -> Sentinel value is datetime.now()
+            target_date2 = date(2020, 1, 2)
+            actual_2 = sentinel_datetime(target_date2)
+            self.assertEqual(actual_2.isoformat(), "2020-01-02T01:33:07+00:00")
 
-        # Date is yesterday -> Sentinel value is the last second on this date
-        target_date3 = date(2020, 1, 1)
-        actual_3 = sentinel_datetime(target_date3, tzinfo=timezone.utc)
-        self.assertEqual(actual_3.isoformat(), "2020-01-01T23:59:59+00:00")
+            # Date is yesterday -> Sentinel value is the last second on this date
+            target_date3 = date(2020, 1, 1)
+            actual_3 = sentinel_datetime(target_date3)
+            self.assertEqual(actual_3.isoformat(), "2020-01-01T23:59:59+00:00")
 
-        # Date is in the future -> Raise error
-        with self.assertRaises(ValueError):
-            target_date4 = date(2020, 1, 3)
-            sentinel_datetime(target_date4, tzinfo=timezone.utc)
+            # Date is in the future -> Raise error
+            with self.assertRaises(ValueError):
+                target_date4 = date(2020, 1, 3)
+                sentinel_datetime(target_date4)
 
 
 class TestSessionActivity(unittest.TestCase):

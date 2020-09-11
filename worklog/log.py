@@ -371,7 +371,11 @@ class Log(object):
                 f'Type must be one of {", ".join([wc.TOKEN_START, wc.TOKEN_STOP])}'
             )
 
-        commit_dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+        commit_dt = (
+            datetime.now(timezone.utc)
+            .astimezone(tz=wc.LOCAL_TIMEZONE)
+            .replace(microsecond=0)
+        )
 
         # Test if there are running tasks
         if category == wc.TOKEN_SESSION:
@@ -477,7 +481,11 @@ class Log(object):
         hours_max_dt = timedelta(hours=hours_max) + break_duration
 
         # calculate remaining time
-        now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+        now = (
+            datetime.now(timezone.utc)
+            .astimezone(tz=wc.LOCAL_TIMEZONE)
+            .replace(microsecond=0)
+        )
         eow_dt = now + (hours_target_dt - total_time)
         eow_str = eow_dt.strftime("%H:%M:%S")
         remaining_time = max(eow_dt - now, timedelta(minutes=0))

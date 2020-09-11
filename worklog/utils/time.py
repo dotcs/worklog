@@ -23,7 +23,11 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
     Calculates the log time based on the current timestamp and either an
     offset or a time correction.
     """
-    my_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+    my_date = (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
     my_date = my_date + timedelta(minutes=offset_min)
 
     if time is not None:

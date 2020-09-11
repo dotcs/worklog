@@ -58,16 +58,23 @@ def check_order_session(
             )
 
 
-def sentinel_datetime(
-    target_date: date, tzinfo: Optional[tzinfo] = wc.LOCAL_TIMEZONE
-) -> datetime:
+def sentinel_datetime(target_date: date) -> datetime:
     if target_date > datetime.now().date():
         raise ValueError("Only dates on the same day or in the past are supported.")
     return min(
-        datetime.now(timezone.utc).astimezone(tz=tzinfo).replace(microsecond=0),
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0),
         datetime(
-            target_date.year, target_date.month, target_date.day, 23, 59, 59, 0, tzinfo,
-        ).astimezone(tz=tzinfo),
+            target_date.year,
+            target_date.month,
+            target_date.day,
+            23,
+            59,
+            59,
+            0,
+            wc.LOCAL_TIMEZONE,
+        ).astimezone(tz=wc.LOCAL_TIMEZONE),
     )
 
 
