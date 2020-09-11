@@ -46,3 +46,12 @@ def extract_date_and_time(
     date: pd.Series = df[source_col].apply(lambda x: x.date)
     time: pd.Series = df[source_col].apply(lambda x: x.time)
     return pd.DataFrame(dict(date=date, time=time),)
+
+
+def now_localtz() -> datetime:
+    return (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
+

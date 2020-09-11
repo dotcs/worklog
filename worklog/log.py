@@ -15,7 +15,7 @@ import pandas as pd  # type: ignore
 from worklog.breaks import AutoBreak
 import worklog.constants as wc
 from worklog.utils.pager import get_pager
-from worklog.utils.time import calc_log_time, extract_date_and_time
+from worklog.utils.time import now_localtz, calc_log_time, extract_date_and_time
 from worklog.utils.schema import empty_df_from_schema, get_datetime_cols_from_schema
 from worklog.utils.formatting import format_timedelta
 from worklog.utils.tasks import (
@@ -366,16 +366,16 @@ class Log(object):
         identifier: str = None,
         force: bool = False,
     ) -> None:
+        if category not in [wc.TOKEN_SESSION, wc.TOKEN_TASK]:
+            raise ValueError(
+                f'Category must be one of {", ".join([wc.TOKEN_SESSION, wc.TOKEN_TASK])}'
+            )
         if type_ not in [wc.TOKEN_START, wc.TOKEN_STOP]:
             raise ValueError(
                 f'Type must be one of {", ".join([wc.TOKEN_START, wc.TOKEN_STOP])}'
             )
 
-        commit_dt = (
-            datetime.now(timezone.utc)
-            .astimezone(tz=wc.LOCAL_TIMEZONE)
-            .replace(microsecond=0)
-        )
+        commit_dt = now_localtz()
 
         # Test if there are running tasks
         if category == wc.TOKEN_SESSION:

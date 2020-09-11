@@ -25,5 +25,5 @@ class ErrMsg(Enum):
     EMPTY_LOG_DATA_FOR_DATE = "No log data available for {query_date}."
     STOP_SESSION_TASKS_RUNNING = (
         "Fatal. Cannot stop, because tasks are still running. "
-        "Stop running tasks first: {active_tasks:} or use --force flag.\n"
+        "Stop running tasks first: {active_tasks:} or use --force flag."
     )

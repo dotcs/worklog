@@ -82,3 +82,22 @@ Break Duration : 00:00:00
 Touched tasks  : (2) [task1 (01:00:00), task2 (01:00:00)]
 Active tasks   : (0) []
 '''
+
+snapshots['TestCommit::test_session_start 1'] = '''2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+'''
+
+snapshots['TestCommit::test_session_start_and_stop 1'] = '''2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+2020-01-01 00:00:00+00:00|2020-01-01 01:00:00+00:00|session|stop|
+'''
+
+snapshots['TestCommit::test_session_and_task 1'] = '''2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|task|start|task1
+2020-01-01 00:00:00+00:00|2020-01-01 01:00:00+00:00|task|stop|task1
+2020-01-01 00:00:00+00:00|2020-01-01 01:00:00+00:00|session|stop|
+'''
+
+snapshots['TestCommit::test_stop_session_with_running_task_force 1'] = '''2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|task|start|task1
+2020-01-01 00:00:00+00:00|2020-01-01 01:00:00+00:00|task|stop|task1
+2020-01-01 00:00:00+00:00|2020-01-01 01:00:00+00:00|session|stop|
+'''

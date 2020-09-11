@@ -317,3 +317,139 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
 
         out, _ = self._capsys.readouterr()
         self.assertEqual(out, "off")
+
+
+class TestCommit(snapshottest.TestCase, TestDataMixin, CapSysMixin):
+    def test_invalid_type(self):
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            with self.assertRaises(ValueError):
+                instance.commit(wc.TOKEN_SESSION, "foobar")
+
+    def test_invalid_category(self):
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            with self.assertRaises(ValueError):
+                instance.commit("foobar", wc.TOKEN_START)
+
+    @patch("worklog.log.now_localtz")
+    def test_session_start(self, mock_now):
+        mock_now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_START, time="2020-01-01T00:00:00+00:00"
+            )
+
+            fh.seek(0)
+
+            content = fh.read().decode()
+            self.assertMatchSnapshot(content)
+
+    @patch("worklog.log.now_localtz")
+    def test_session_start_and_stop(self, mock_now):
+        mock_now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_START, time="2020-01-01T00:00:00+00:00"
+            )
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_STOP, time="2020-01-01T01:00:00+00:00"
+            )
+
+            fh.seek(0)
+
+            content = fh.read().decode()
+            self.assertMatchSnapshot(content)
+
+    @patch("worklog.log.now_localtz")
+    def test_session_and_task(self, mock_now):
+        mock_now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_START, time="2020-01-01T00:00:00+00:00"
+            )
+            instance.commit(
+                wc.TOKEN_TASK,
+                wc.TOKEN_START,
+                time="2020-01-01T00:00:00+00:00",
+                identifier="task1",
+            )
+            instance.commit(
+                wc.TOKEN_TASK,
+                wc.TOKEN_STOP,
+                time="2020-01-01T01:00:00+00:00",
+                identifier="task1",
+            )
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_STOP, time="2020-01-01T01:00:00+00:00",
+            )
+
+            fh.seek(0)
+
+            content = fh.read().decode()
+            self.assertMatchSnapshot(content)
+
+    @patch("worklog.log.now_localtz")
+    def test_stop_session_with_running_task(self, mock_now):
+        mock_now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_START, time="2020-01-01T00:00:00+00:00"
+            )
+            instance.commit(
+                wc.TOKEN_TASK,
+                wc.TOKEN_START,
+                time="2020-01-01T00:00:00+00:00",
+                identifier="task1",
+            )
+
+            with self.assertRaises(SystemExit) as err:
+                instance.commit(
+                    wc.TOKEN_SESSION, wc.TOKEN_STOP, time="2020-01-01T01:00:00+00:00",
+                )
+
+            _, stderr = self._capsys.readouterr()
+
+            self.assertEqual(
+                stderr,
+                ErrMsg.STOP_SESSION_TASKS_RUNNING.value.format(active_tasks=["task1"])
+                + "\n",
+            )
+            self.assertTrue(err.exception.code, 1)
+
+    @patch("worklog.log.now_localtz")
+    def test_stop_session_with_running_task_force(self, mock_now):
+        mock_now.return_value = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        with tempfile.NamedTemporaryFile() as fh:
+            instance = Log(fh.name)
+
+            instance.commit(
+                wc.TOKEN_SESSION, wc.TOKEN_START, time="2020-01-01T00:00:00+00:00"
+            )
+            instance.commit(
+                wc.TOKEN_TASK,
+                wc.TOKEN_START,
+                time="2020-01-01T00:00:00+00:00",
+                identifier="task1",
+            )
+            instance.commit(
+                wc.TOKEN_SESSION,
+                wc.TOKEN_STOP,
+                time="2020-01-01T01:00:00+00:00",
+                force=True,
+            )
+
+            fh.seek(0)
+
+            content = fh.read().decode()
+            self.assertMatchSnapshot(content)
