@@ -285,6 +285,17 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
         out, _ = self._capsys.readouterr()
         self.assertMatchSnapshot(out)
 
+    def test_tracking_on_with_fmt(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_on")
+            instance = Log(fp)
+            query_date = date(2020, 1, 1)
+
+            instance.status(8, 10, query_date=query_date, fmt="{tracking_status}")
+
+        out, _ = self._capsys.readouterr()
+        self.assertEqual(out, "on")
+
     def test_tracking_off(self):
         with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
             fp = self._get_testdata_fp("status_tracking_off")
@@ -295,3 +306,14 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
 
         out, _ = self._capsys.readouterr()
         self.assertMatchSnapshot(out)
+
+    def test_tracking_off_with_fmt(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_off")
+            instance = Log(fp)
+            query_date = date(2020, 1, 1)
+
+            instance.status(8, 10, query_date=query_date, fmt="{tracking_status}")
+
+        out, _ = self._capsys.readouterr()
+        self.assertEqual(out, "off")
