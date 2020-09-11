@@ -1,4 +1,5 @@
 import unittest
+import pytest
 from unittest.mock import patch, Mock, call
 import tempfile
 from pathlib import Path
@@ -193,3 +194,22 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
             )
 
             mock_logger.assert_has_calls(calls)
+
+
+class TestListTasks(unittest.TestCase, SnapshotMixin):
+    @pytest.fixture(autouse=True)
+    def capsys(self, capsys):
+        self._capsys = capsys
+
+    def test_list_tasks(self):
+        fp = self._get_snapshot_fp("tasks_multiple_nested")
+        instance = Log(fp)
+        instance.list_tasks()
+
+        out, err = self._capsys.readouterr()
+        expected = """These tasks are listed in the log:
+task1 (2)
+task2 (2)
+task3 (2)
+"""
+        assert out == expected
