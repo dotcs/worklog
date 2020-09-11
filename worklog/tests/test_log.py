@@ -14,14 +14,12 @@ from worklog.errors import ErrMsg
 import worklog.constants as wc
 
 
-class SnapshotMixin(object):
-    def _get_snapshot_fp(self, name):
-        return (
-            Path("worklog", "tests", "snapshots", f"{name}.csv").absolute().as_posix()
-        )
+class TestDataMixin(object):
+    def _get_testdata_fp(self, name):
+        return Path("worklog", "tests", "data", f"{name}.csv").absolute().as_posix()
 
 
-class TestInit(unittest.TestCase, SnapshotMixin):
+class TestInit(unittest.TestCase, TestDataMixin):
     def test_file_created(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             fp = Path(tmpdir, "foobar")
@@ -38,16 +36,16 @@ class TestInit(unittest.TestCase, SnapshotMixin):
             self.assertTrue(os.access(fp, os.W_OK))
 
     def test_file_is_read(self):
-        fp = self._get_snapshot_fp("session_simple")
+        fp = self._get_testdata_fp("session_simple")
         instance = Log(fp)
         self.assertFalse(instance._log_df.empty)
 
 
-class TestDoctorSession(unittest.TestCase, SnapshotMixin):
+class TestDoctorSession(unittest.TestCase, TestDataMixin):
     def test_ok(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_session_ok")
+            fp = self._get_testdata_fp("doctor_session_ok")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -56,7 +54,7 @@ class TestDoctorSession(unittest.TestCase, SnapshotMixin):
     def test_stop_entry_missing_single(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_session_stop_missing_single")
+            fp = self._get_testdata_fp("doctor_session_stop_missing_single")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -73,7 +71,7 @@ class TestDoctorSession(unittest.TestCase, SnapshotMixin):
     def test_stop_entry_missing_multiple(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_session_stop_missing_multiple")
+            fp = self._get_testdata_fp("doctor_session_stop_missing_multiple")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -100,7 +98,7 @@ class TestDoctorSession(unittest.TestCase, SnapshotMixin):
     def test_wrong_order(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_session_wrong_order")
+            fp = self._get_testdata_fp("doctor_session_wrong_order")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -111,7 +109,7 @@ class TestDoctorSession(unittest.TestCase, SnapshotMixin):
     def test_wrong_order_2(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_session_wrong_order_2")
+            fp = self._get_testdata_fp("doctor_session_wrong_order_2")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -120,11 +118,11 @@ class TestDoctorSession(unittest.TestCase, SnapshotMixin):
             mock_logger.assert_has_calls(calls)
 
 
-class TestDoctorTask(unittest.TestCase, SnapshotMixin):
+class TestDoctorTask(unittest.TestCase, TestDataMixin):
     def test_ok(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_task_ok")
+            fp = self._get_testdata_fp("doctor_task_ok")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -133,7 +131,7 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
     def test_task_start_entry_missing(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_task_start_missing")
+            fp = self._get_testdata_fp("doctor_task_start_missing")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -150,7 +148,7 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
     def test_task_stop_entry_missing(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_task_stop_missing")
+            fp = self._get_testdata_fp("doctor_task_stop_missing")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -167,7 +165,7 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
     def test_task_wrong_order(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_task_wrong_order")
+            fp = self._get_testdata_fp("doctor_task_wrong_order")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -184,7 +182,7 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
     def test_task_wrong_order_2(self):
         logger = logging.getLogger("test_logger")
         with patch.object(logger, "error") as mock_logger:
-            fp = self._get_snapshot_fp("doctor_task_wrong_order_2")
+            fp = self._get_testdata_fp("doctor_task_wrong_order_2")
             instance = Log(fp, logger=logger)
             instance.doctor()
 
@@ -199,13 +197,13 @@ class TestDoctorTask(unittest.TestCase, SnapshotMixin):
             mock_logger.assert_has_calls(calls)
 
 
-class TestListTasks(unittest.TestCase, SnapshotMixin):
+class TestListTasks(unittest.TestCase, TestDataMixin):
     @pytest.fixture(autouse=True)
     def capsys(self, capsys):
         self._capsys = capsys
 
     def test_list_tasks(self):
-        fp = self._get_snapshot_fp("tasks_multiple_nested")
+        fp = self._get_testdata_fp("tasks_multiple_nested")
         instance = Log(fp)
         instance.list_tasks()
 
@@ -218,13 +216,13 @@ task3 (2)
         assert out == expected
 
 
-class TestReport(snapshottest.TestCase, SnapshotMixin):
+class TestReport(snapshottest.TestCase, TestDataMixin):
     @pytest.fixture(autouse=True)
     def capsys(self, capsys):
         self._capsys = capsys
 
     def test_report_with_tasks(self):
-        fp = self._get_snapshot_fp("report_with_tasks")
+        fp = self._get_testdata_fp("report_with_tasks")
         instance = Log(fp)
         date_from = datetime(2020, 1, 1, tzinfo=timezone.utc)
         date_to = datetime(2020, 3, 1, tzinfo=timezone.utc)
@@ -234,7 +232,7 @@ class TestReport(snapshottest.TestCase, SnapshotMixin):
         self.assertMatchSnapshot(out)
 
     def test_report_with_tasks_and_autobreak(self):
-        fp = self._get_snapshot_fp("report_with_tasks")
+        fp = self._get_testdata_fp("report_with_tasks")
         instance = Log(fp)
         instance.auto_break = AutoBreak(limits=[0], durations=[60])
         date_from = datetime(2020, 1, 1, tzinfo=timezone.utc)
