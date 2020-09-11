@@ -7,6 +7,7 @@ from io import StringIO
 from math import floor
 from pathlib import Path
 from typing import List, Optional, Tuple
+from collections import Counter
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -105,10 +106,14 @@ class Log(object):
     def list_tasks(self):
         """List all known tasks, i.e. tasks that have been used previously
         and are stored in the logfile."""
-        task_df = self._log_df[self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK]
+        mask_task = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        task_df = self._log_df[mask_task]
+        task_counter = Counter(task_df[wc.COL_TASK_IDENTIFIER])
+
         sys.stdout.write("These tasks are listed in the log:\n")
-        for task_id in sorted(task_df[wc.COL_TASK_IDENTIFIER].unique()):
-            sys.stdout.write(f"{task_id}\n")
+        for task in sorted(task_counter.keys()):
+            count = task_counter[task]
+            sys.stdout.write(f"{task} ({count})\n")
 
     def log(
         self, n: int, use_pager: bool, filter_category: Optional[List[str]]
