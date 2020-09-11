@@ -1,5 +1,6 @@
 from pandas import DataFrame
 import pandas as pd
+from pathlib import Path
 
 import worklog.constants as wc
 
@@ -17,7 +18,7 @@ SCHEMA_DATE_COLS = [wc.COL_COMMIT_DATETIME, wc.COL_LOG_DATETIME]
 
 def read_log_sample(id: str) -> DataFrame:
     return pd.read_csv(
-        f"worklog/tests/snapshots/{id}.csv",
+        Path("worklog", "tests", "data", f"{id}.csv").absolute().as_posix(),
         sep="|",
         header=None,
         names=SCHEMA_COL_NAMES,

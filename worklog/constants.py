@@ -15,7 +15,7 @@ LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinf
 
 DEFAULT_LOGGER_NAME = "worklog"
 
-SUBCMD_COMMIT = "commit"
+SUBCMD_SESSION = "session"
 SUBCMD_DOCTOR = "doctor"
 SUBCMD_TASK = "task"
 SUBCMD_STATUS = "status"

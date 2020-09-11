@@ -23,7 +23,11 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
     Calculates the log time based on the current timestamp and either an
     offset or a time correction.
     """
-    my_date = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+    my_date = (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
     my_date = my_date + timedelta(minutes=offset_min)
 
     if time is not None:
@@ -42,3 +46,12 @@ def extract_date_and_time(
     date: pd.Series = df[source_col].apply(lambda x: x.date)
     time: pd.Series = df[source_col].apply(lambda x: x.time)
     return pd.DataFrame(dict(date=date, time=time),)
+
+
+def now_localtz() -> datetime:
+    return (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
+

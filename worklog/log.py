@@ -7,6 +7,7 @@ from io import StringIO
 from math import floor
 from pathlib import Path
 from typing import List, Optional, Tuple
+from collections import Counter
 
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -14,7 +15,7 @@ import pandas as pd  # type: ignore
 from worklog.breaks import AutoBreak
 import worklog.constants as wc
 from worklog.utils.pager import get_pager
-from worklog.utils.time import calc_log_time, extract_date_and_time
+from worklog.utils.time import now_localtz, calc_log_time, extract_date_and_time
 from worklog.utils.schema import empty_df_from_schema, get_datetime_cols_from_schema
 from worklog.utils.formatting import format_timedelta
 from worklog.utils.tasks import (
@@ -28,8 +29,7 @@ from worklog.utils.session import (
     sentinel_datetime,
     is_active_session,
 )
-
-logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
+from worklog.errors import ErrMsg
 
 
 class Log(object):
@@ -48,25 +48,23 @@ class Log(object):
     ]
 
     # Error messages
-    _err_msg_empty_log = (
-        "Fatal: No log data available. Start a new log entry with 'wl commit start'.\n"
-    )
-    _err_msg_empty_log_short = "N/A"
-    _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_commit_active_tasks = (
-        "Fatal. Cannot stop, because tasks are still running. "
-        "Stop running tasks first: {active_tasks:} or use --force flag.\n"
-    )
+    _err_msg_session_active_tasks = ()
 
     auto_break: AutoBreak = AutoBreak()
 
-    def __init__(self, fp: str, separator: str = "|") -> None:
+    def __init__(
+        self, fp: str, separator: str = "|", logger: Optional[logging.Logger] = None
+    ) -> None:
         self._log_fp = fp
         self._separator = separator
 
         Path(self._log_fp).touch(mode=0o660)
         self._read()
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(wc.DEFAULT_LOGGER_NAME)
 
     def commit(
         self,
@@ -83,17 +81,32 @@ class Log(object):
 
     def doctor(self) -> None:
         """Test if the logfile is consistent."""
-        self._log_df.groupby(["date"]).apply(
-            lambda group: check_order_session(group, logger)
+        mask_session = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_SESSION
+        mask_task = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+
+        # sessions only
+        self._log_df[mask_session].groupby(["date"]).apply(
+            lambda group: check_order_session(group, self.logger)
+        )
+
+        # tasks only
+        self._log_df[mask_task].groupby(["date", "identifier"]).apply(
+            lambda group: check_order_session(
+                group, self.logger, task_id=group[wc.COL_TASK_IDENTIFIER].iloc[0]
+            )
         )
 
     def list_tasks(self):
         """List all known tasks, i.e. tasks that have been used previously
         and are stored in the logfile."""
-        task_df = self._log_df[self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK]
+        mask_task = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
+        task_df = self._log_df[mask_task]
+        task_counter = Counter(task_df[wc.COL_TASK_IDENTIFIER])
+
         sys.stdout.write("These tasks are listed in the log:\n")
-        for task_id in sorted(task_df[wc.COL_TASK_IDENTIFIER].unique()):
-            sys.stdout.write(f"{task_id}\n")
+        for task in sorted(task_counter.keys()):
+            count = task_counter[task]
+            sys.stdout.write(f"{task} ({count})\n")
 
     def log(
         self, n: int, use_pager: bool, filter_category: Optional[List[str]]
@@ -114,14 +127,14 @@ class Log(object):
             sys.stdout.write(df.to_string(index=False) + "\n")
         else:
             with tempfile.NamedTemporaryFile(mode="w") as fh:
-                logger.debug(f"Write content to temporary file: {fh.name}")
+                self.logger.debug(f"Write content to temporary file: {fh.name}")
                 fh.write(df.to_string(index=False))
                 fh.flush()
                 pager = get_pager()
                 if pager is None:
                     sys.stdout.write(df.to_string(index=False) + "\n")
                 else:
-                    logger.debug(f"Set pager to {pager}")
+                    self.logger.debug(f"Set pager to {pager}")
                     process = subprocess.Popen([pager, fh.name])
                     process.wait()
 
@@ -166,6 +179,7 @@ class Log(object):
                 wc.COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
                 "agg_time": format_timedelta,
                 "agg_time_bookable": format_timedelta,
+                "break": format_timedelta,
             }
 
         self._print_aggregation(
@@ -203,16 +217,15 @@ class Log(object):
 
         if df_day.shape[0] == 0:
             if fmt is None:
-                msg = self._err_msg_log_data_missing_for_date.format(
-                    query_date=query_date
-                )
-                sys.stderr.write(msg)
+                msg = ErrMsg.EMPTY_LOG_DATA_FOR_DATE.value.format(query_date=query_date)
+                sys.stderr.write(msg + "\n")
+                sys.exit(1)
             else:
-                sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
-            return
+                sys.stdout.write(ErrMsg.NA.value)
+                sys.exit(0)
 
         is_active = is_active_session(df_day)
-        logger.debug(f"Is active: {is_active}")
+        self.logger.debug(f"Is active: {is_active}")
 
         df_day = self._add_sentinel(query_date, df_day)
         facts = self._calc_facts(df_day, hours_target, hours_max)
@@ -220,21 +233,21 @@ class Log(object):
         date_mask = self._log_df["date"] == query_date
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
         sel_task_mask = date_mask & task_mask
-        all_touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
+        touched_tasks = get_all_task_ids_with_duration(self._log_df[sel_task_mask])
         active_tasks = get_active_task_ids(self._log_df[sel_task_mask])
 
         lines = [
-            ("Status", "Tracking {status}"),
-            ("Total time", "{total_time} ({percentage:3}%)"),
+            ("Status", "Tracking {tracking_status}"),
+            ("Total time", "{total_time} ({percentage_done:3}%)"),
             ("Remaining time", "{remaining_time} ({percentage_remaining:3}%)"),
             ("Overtime", "{overtime} ({percentage_overtime:3}%)"),
             ("Break Duration", "{break_duration}"),
-            ("All touched tasks", "{all_touched_tasks}",),
-            ("Active tasks", "{active_tasks}",),
+            ("Touched tasks", "{touched_tasks_stats}",),
+            ("Active tasks", "{active_tasks_stats}",),
         ]
 
         if is_active and date == "today":
-            lines += [("End of work", facts["end_time_str"],)]
+            lines += [("End of work", "{eow}",)]
 
         key_max_len = max([len(line[0]) for line in lines])
         fmt_string = "{:" + str(key_max_len + 1) + "s}: {}"
@@ -244,28 +257,19 @@ class Log(object):
         sys.stdout.write(
             (stdout_fmt if fmt is None else fmt).format(
                 **facts,
-                status="on" if is_active else "off",
-                active_tasks=f"({len(active_tasks)}) [" + ", ".join(active_tasks) + "]",
-                all_touched_tasks=f"({len(all_touched_tasks)}) ["
+                active_tasks=", ".join(active_tasks),
+                active_tasks_stats=f"({len(active_tasks)}) ["
+                + ", ".join(active_tasks)
+                + "]",
+                touched_tasks=", ".join(touched_tasks.keys()),
+                touched_tasks_stats=f"({len(touched_tasks)}) ["
                 + ", ".join(
-                    [
-                        f"{k} ({format_timedelta(v)})"
-                        for k, v in all_touched_tasks.items()
-                    ]
+                    [f"{k} ({format_timedelta(v)})" for k, v in touched_tasks.items()]
                 )
                 + "]",
+                tracking_status="on" if is_active else "off",
             )
         )
-
-    def stop_active_tasks(self, log_dt: datetime):
-        """Stop all active tasks by commiting changes to the logfile."""
-        query_date = log_dt.date()
-        task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
-        date_mask = self._log_df["date"] == query_date
-        mask = task_mask & date_mask
-        active_task_ids = get_active_task_ids(self._log_df[mask])
-        for task_id in active_task_ids:
-            self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
 
     def task_report(self, task_id):
         """Generate a report of a given task."""
@@ -330,6 +334,7 @@ class Log(object):
                 parse_dates=date_cols,
                 header=None,
                 names=header,
+                comment="#",
             ).sort_values(by=[wc.COL_LOG_DATETIME])
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
@@ -352,12 +357,16 @@ class Log(object):
         identifier: str = None,
         force: bool = False,
     ) -> None:
+        if category not in [wc.TOKEN_SESSION, wc.TOKEN_TASK]:
+            raise ValueError(
+                f'Category must be one of {", ".join([wc.TOKEN_SESSION, wc.TOKEN_TASK])}'
+            )
         if type_ not in [wc.TOKEN_START, wc.TOKEN_STOP]:
             raise ValueError(
                 f'Type must be one of {", ".join([wc.TOKEN_START, wc.TOKEN_STOP])}'
             )
 
-        commit_dt = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+        commit_dt = now_localtz()
 
         # Test if there are running tasks
         if category == wc.TOKEN_SESSION:
@@ -367,10 +376,10 @@ class Log(object):
             active_tasks = get_active_task_ids(self._log_df[mask])
             if len(active_tasks) > 0:
                 if not force:
-                    msg = self._err_msg_commit_active_tasks.format(
+                    msg = ErrMsg.STOP_SESSION_TASKS_RUNNING.value.format(
                         active_tasks=active_tasks
                     )
-                    sys.stderr.write(msg)
+                    sys.stderr.write(msg + "\n")
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
@@ -400,14 +409,16 @@ class Log(object):
     def _check_nonempty_or_exit(self, fmt: Optional[str]):
         """
         Tests if the log file has at least a single value.
-        Exits with code 0 if no entry is available.
+        Exits with code 1 if no entry is available and no custom format has
+        been set. Always exits with code 0 if a custom format is set.
         """
         if self._log_df.shape[0] == 0:
             if fmt is None:
-                sys.stderr.write(self._err_msg_empty_log)
+                sys.stderr.write(ErrMsg.EMPTY_LOG_DATA.value + "\n")
+                sys.exit(1)
             else:
-                sys.stdout.write(self._err_msg_empty_log_short)
-            sys.exit(0)
+                sys.stdout.write(ErrMsg.NA.value)
+                sys.exit(0)
 
     def _filter_date_category_limit_cols(
         self,
@@ -443,32 +454,43 @@ class Log(object):
                 index=[0],
             )
             ret = pd.concat((ret, sentinel_df))
-            logger.warning(f"Set sentinel stop value: {sdt}")
+            self.logger.warning(f"Set sentinel stop value: {sdt}")
         return ret
 
     def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
         shifted_dt = df[wc.COL_LOG_DATETIME].shift(1)
         stop_mask = df[wc.COL_TYPE] == wc.TOKEN_STOP
+
+        # calculate total working time
         total_time = (df[stop_mask][wc.COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
         total_time_str = format_timedelta(total_time)
 
+        # calculate breaks
         break_duration = self.auto_break.get_duration(total_time)
-
+        break_duration_str = format_timedelta(break_duration)
         hours_target_dt = timedelta(hours=hours_target) + break_duration
         hours_max_dt = timedelta(hours=hours_max) + break_duration
 
-        now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
-        end_time = now + (hours_target_dt - total_time)
-        end_time_str = end_time.strftime("%H:%M:%S")
-        remaining_time = max(end_time - now, timedelta(minutes=0))
+        # calculate remaining time
+        now = (
+            datetime.now(timezone.utc)
+            .astimezone(tz=wc.LOCAL_TIMEZONE)
+            .replace(microsecond=0)
+        )
+        eow_dt = now + (hours_target_dt - total_time)
+        eow_str = eow_dt.strftime("%H:%M:%S")
+        remaining_time = max(eow_dt - now, timedelta(minutes=0))
         remaining_time_str = format_timedelta(remaining_time)
+
+        # calculate overtime
         overtime = max(total_time - hours_target_dt, timedelta(minutes=0))
         overtime_str = format_timedelta(overtime)
 
-        percentage = round(
+        # calculcate percentage values
+        percentage_done = round(
             total_time.total_seconds() / hours_target_dt.total_seconds() * 100
         )
-        percentage_remaining = max(0, 100 - percentage)
+        percentage_remaining = max(0, 100 - percentage_done)
         percentage_overtime = max(
             round(
                 overtime.total_seconds()
@@ -477,17 +499,24 @@ class Log(object):
             ),
             0,
         )
+
+        def _short_hours_str(value: str):
+            return value[: len("00:00")]
+
         return dict(
-            percentage=percentage,
-            end_of_work=end_time_str,
-            total_time=total_time_str,
-            remaining_time=remaining_time_str,
-            remaining_time_short=remaining_time_str[: len("00:00")],
-            percentage_remaining=percentage_remaining,
+            break_duration=break_duration_str,
+            break_duration_short=_short_hours_str(break_duration_str),
+            eow=eow_str,
+            eow_short=_short_hours_str(eow_str),
             overtime=overtime_str,
-            overtime_short=overtime_str[: len("00:00")],
+            overtime_short=_short_hours_str(overtime_str),
+            percentage_done=percentage_done,
             percentage_overtime=percentage_overtime,
-            break_duration=format_timedelta(break_duration),
+            percentage_remaining=percentage_remaining,
+            remaining_time=remaining_time_str,
+            remaining_time_short=_short_hours_str(remaining_time_str),
+            total_time=total_time_str,
+            total_time_short=_short_hours_str(total_time_str),
         )
 
     def _aggregate_base(self, mask, keep_cols: List[str] = []):

@@ -21,7 +21,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="subcmd")
 
-    _add_commit_parser(subparsers)
+    _add_session_parser(subparsers)
     _add_task_parser(subparsers)
     _add_status_parser(subparsers)
     _add_doctor_parser(subparsers)
@@ -31,21 +31,21 @@ def get_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _add_commit_parser(subparsers: argparse._SubParsersAction):
-    commit_parser = subparsers.add_parser(
-        wc.SUBCMD_COMMIT,
+def _add_session_parser(subparsers: argparse._SubParsersAction):
+    session_parser = subparsers.add_parser(
+        wc.SUBCMD_SESSION,
         description=(
             "Commit the start or end of a new working session to the worklog file. "
             "Use this function to stamp in the morning and stamp out in the evening."
         ),
     )
-    commit_parser.add_argument(
+    session_parser.add_argument(
         "type",
         choices=[wc.TOKEN_START, wc.TOKEN_STOP],
         help="Persists a new work session or closes a work session.",
     )
-    _add_timeshift_args(commit_parser)
-    commit_parser.add_argument(
+    _add_timeshift_args(session_parser)
+    session_parser.add_argument(
         "-f",
         "--force",
         action="store_true",
@@ -59,7 +59,7 @@ def _add_task_parser(subparsers: argparse._SubParsersAction):
         description=(
             "Tasks are pieces of work to be done or undertaken. "
             "A task can only be started during an ongoing session. "
-            "Use 'wl commit start' to start a new working session."
+            "Use 'wl session start' to start a new working session."
         ),
     )
     task_parser_type = task_parser.add_subparsers(dest="type")
@@ -70,7 +70,10 @@ def _add_task_parser(subparsers: argparse._SubParsersAction):
         "id", type=str, help="Task identifier, can be freely chosen",
     )
     task_start_parser.add_argument(
-        "-ac", "--auto-close", action="store_true", help=("Auto closes open tasks."),
+        "-as",
+        "--auto-stop",
+        action="store_true",
+        help=("Automatically stops open tasks."),
     )
     _add_timeshift_args(task_start_parser)
 
@@ -165,7 +168,11 @@ def _add_log_parser(subparsers: argparse._SubParsersAction):
 
 
 def _add_report_parser(subparsers: argparse._SubParsersAction):
-    now = datetime.now(timezone.utc).astimezone().replace(microsecond=0)
+    now = (
+        datetime.now(timezone.utc)
+        .astimezone(tz=wc.LOCAL_TIMEZONE)
+        .replace(microsecond=0)
+    )
     current_month: str = now.replace(day=1).isoformat()[: len("2000-01-01")]
     next_month: str = (now.replace(day=1) + timedelta(days=31)).replace(
         day=1
