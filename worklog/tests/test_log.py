@@ -5,7 +5,10 @@ import tempfile
 from pathlib import Path
 import os
 import logging
+from datetime import datetime, timezone
+import snapshottest
 
+from worklog.breaks import AutoBreak
 from worklog.log import Log
 from worklog.errors import ErrMsg
 import worklog.constants as wc
@@ -213,3 +216,30 @@ task2 (2)
 task3 (2)
 """
         assert out == expected
+
+
+class TestReport(snapshottest.TestCase, SnapshotMixin):
+    @pytest.fixture(autouse=True)
+    def capsys(self, capsys):
+        self._capsys = capsys
+
+    def test_report_with_tasks(self):
+        fp = self._get_snapshot_fp("report_with_tasks")
+        instance = Log(fp)
+        date_from = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        date_to = datetime(2020, 3, 1, tzinfo=timezone.utc)
+        instance.report(date_from, date_to)
+
+        out, err = self._capsys.readouterr()
+        self.assertMatchSnapshot(out)
+
+    def test_report_with_tasks_and_autobreak(self):
+        fp = self._get_snapshot_fp("report_with_tasks")
+        instance = Log(fp)
+        instance.auto_break = AutoBreak(limits=[0], durations=[60])
+        date_from = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        date_to = datetime(2020, 3, 1, tzinfo=timezone.utc)
+        instance.report(date_from, date_to)
+
+        out, err = self._capsys.readouterr()
+        self.assertMatchSnapshot(out)

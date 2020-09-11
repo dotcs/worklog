@@ -186,6 +186,7 @@ class Log(object):
                 wc.COL_LOG_DATETIME: lambda v: str(v.date())[:date_max_len],
                 "agg_time": format_timedelta,
                 "agg_time_bookable": format_timedelta,
+                "break": format_timedelta,
             }
 
         self._print_aggregation(
