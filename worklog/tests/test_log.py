@@ -19,6 +19,12 @@ class TestDataMixin(object):
         return Path("worklog", "tests", "data", f"{name}.csv").absolute().as_posix()
 
 
+class CapSysMixin(object):
+    @pytest.fixture(autouse=True)
+    def capsys(self, capsys):
+        self._capsys = capsys
+
+
 class TestInit(unittest.TestCase, TestDataMixin):
     def test_file_created(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -216,11 +222,7 @@ task3 (2)
         assert out == expected
 
 
-class TestReport(snapshottest.TestCase, TestDataMixin):
-    @pytest.fixture(autouse=True)
-    def capsys(self, capsys):
-        self._capsys = capsys
-
+class TestReport(snapshottest.TestCase, TestDataMixin, CapSysMixin):
     def test_report_with_tasks(self):
         fp = self._get_testdata_fp("report_with_tasks")
         instance = Log(fp)
@@ -241,3 +243,33 @@ class TestReport(snapshottest.TestCase, TestDataMixin):
 
         out, err = self._capsys.readouterr()
         self.assertMatchSnapshot(out)
+
+
+class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
+    def test_empty(self):
+        fp = self._get_testdata_fp("status_empty")
+        instance = Log(fp)
+        query_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+        with self.assertRaises(SystemExit) as err:
+            instance.status(8, 10, query_date=query_date)
+
+        _, stderr = self._capsys.readouterr()
+        self.assertEqual(
+            stderr, ErrMsg.EMPTY_LOG_DATA.value + "\n",
+        )
+
+        self.assertEqual(err.exception.code, 1)
+
+    def test_empty_with_fmt(self):
+        fp = self._get_testdata_fp("status_empty")
+        instance = Log(fp)
+        query_date = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+        with self.assertRaises(SystemExit) as err:
+            instance.status(8, 10, query_date=query_date, fmt="{tracking_status}")
+
+        out, _ = self._capsys.readouterr()
+        self.assertEqual(out, ErrMsg.NA.value)
+
+        self.assertEqual(err.exception.code, 0)

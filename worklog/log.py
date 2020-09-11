@@ -29,6 +29,7 @@ from worklog.utils.session import (
     sentinel_datetime,
     is_active_session,
 )
+from worklog.errors import ErrMsg
 
 
 class Log(object):
@@ -47,16 +48,8 @@ class Log(object):
     ]
 
     # Error messages
-    _err_msg_empty_log = (
-        "Fatal: No log data available. Start a new log entry with 'wl session start'.\n"
-    )
-    _err_msg_empty_log_short = "N/A"
-    _err_msg_log_data_missing_for_date = "No log data available for {query_date}.\n"
     _err_msg_log_data_missing_for_date_short = "N/A"
-    _err_msg_session_active_tasks = (
-        "Fatal. Cannot stop, because tasks are still running. "
-        "Stop running tasks first: {active_tasks:} or use --force flag.\n"
-    )
+    _err_msg_session_active_tasks = ()
 
     auto_break: AutoBreak = AutoBreak()
 
@@ -224,12 +217,10 @@ class Log(object):
 
         if df_day.shape[0] == 0:
             if fmt is None:
-                msg = self._err_msg_log_data_missing_for_date.format(
-                    query_date=query_date
-                )
-                sys.stderr.write(msg)
+                msg = ErrMsg.EMPTY_LOG_DATA_FOR_DATE.value.format(query_date=query_date)
+                sys.stderr.write(msg + "\n")
             else:
-                sys.stdout.write(self._err_msg_log_data_missing_for_date_short)
+                sys.stdout.write(ErrMsg.NA.value)
             return
 
         is_active = is_active_session(df_day)
@@ -390,10 +381,10 @@ class Log(object):
             active_tasks = get_active_task_ids(self._log_df[mask])
             if len(active_tasks) > 0:
                 if not force:
-                    msg = self._err_msg_session_active_tasks.format(
+                    msg = ErrMsg.STOP_SESSION_TASKS_RUNNING.value.format(
                         active_tasks=active_tasks
                     )
-                    sys.stderr.write(msg)
+                    sys.stderr.write(msg + "\n")
                     sys.exit(1)
                 else:
                     for task_id in active_tasks:
@@ -423,14 +414,16 @@ class Log(object):
     def _check_nonempty_or_exit(self, fmt: Optional[str]):
         """
         Tests if the log file has at least a single value.
-        Exits with code 0 if no entry is available.
+        Exits with code 1 if no entry is available and no custom format has
+        been set. Always exits with code 0 if a custom format is set.
         """
         if self._log_df.shape[0] == 0:
             if fmt is None:
-                sys.stderr.write(self._err_msg_empty_log)
+                sys.stderr.write(ErrMsg.EMPTY_LOG_DATA.value + "\n")
+                sys.exit(1)
             else:
-                sys.stdout.write(self._err_msg_empty_log_short)
-            sys.exit(0)
+                sys.stdout.write(ErrMsg.NA.value)
+                sys.exit(0)
 
     def _filter_date_category_limit_cols(
         self,
