@@ -1,0 +1,5 @@
+# Running session with one stopped task (task1) and one started task (task2)
+2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|task|start|task1
+2020-01-01 01:00:00+00:00|2020-01-01 01:00:00+00:00|task|stop|task1
+2020-01-01 01:00:00+00:00|2020-01-01 01:00:00+00:00|task|start|task2

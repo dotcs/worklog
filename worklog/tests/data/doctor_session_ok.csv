@@ -1,0 +1,3 @@
+# first date is fine, has start and stop record
+2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
+2020-01-01 01:00:00+00:00|2020-01-01 01:00:00+00:00|session|stop|
