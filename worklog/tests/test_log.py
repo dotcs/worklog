@@ -318,6 +318,35 @@ class TestStatus(snapshottest.TestCase, TestDataMixin, CapSysMixin):
         out, _ = self._capsys.readouterr()
         self.assertEqual(out, "off")
 
+    def test_day_with_no_content(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_off")
+            instance = Log(fp)
+            query_date = date(2020, 1, 2)
+
+            with self.assertRaises(SystemExit) as err:
+                instance.status(8, 10, query_date=query_date)
+
+        _, stderr = self._capsys.readouterr()
+        self.assertEqual(
+            stderr,
+            ErrMsg.EMPTY_LOG_DATA_FOR_DATE.value.format(query_date=query_date) + "\n",
+        )
+        self.assertEqual(err.exception.code, 1)
+
+    def test_day_with_no_content_fmt(self):
+        with patch("worklog.constants.LOCAL_TIMEZONE", new=timezone.utc):
+            fp = self._get_testdata_fp("status_tracking_off")
+            instance = Log(fp)
+            query_date = date(2020, 1, 2)
+
+            with self.assertRaises(SystemExit) as err:
+                instance.status(8, 10, query_date=query_date, fmt="{tracking_status}")
+
+        stdout, _ = self._capsys.readouterr()
+        self.assertEqual(stdout, ErrMsg.NA.value)
+        self.assertEqual(err.exception.code, 0)
+
 
 class TestCommit(snapshottest.TestCase, TestDataMixin, CapSysMixin):
     def test_invalid_type(self):

@@ -219,9 +219,10 @@ class Log(object):
             if fmt is None:
                 msg = ErrMsg.EMPTY_LOG_DATA_FOR_DATE.value.format(query_date=query_date)
                 sys.stderr.write(msg + "\n")
+                sys.exit(1)
             else:
                 sys.stdout.write(ErrMsg.NA.value)
-            return
+                sys.exit(0)
 
         is_active = is_active_session(df_day)
         self.logger.debug(f"Is active: {is_active}")
