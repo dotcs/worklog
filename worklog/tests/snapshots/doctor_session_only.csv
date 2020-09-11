@@ -1,9 +1,0 @@
-# first date is fine, has start and stop record
-2020-01-01 00:00:00+00:00|2020-01-01 00:00:00+00:00|session|start|
-2020-01-01 01:00:00+00:00|2020-01-01 01:00:00+00:00|session|stop|
-# stop record missing!
-2020-01-02 00:00:00+00:00|2020-01-02 00:00:00+00:00|session|start|
-# stop record missing!
-2020-01-03 01:00:00+00:00|2020-01-03 01:00:00+00:00|session|start|
-# stop record missing!
-2020-01-04 01:00:00+00:00|2020-01-04 01:00:00+00:00|session|start|
