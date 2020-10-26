@@ -62,9 +62,7 @@ def sentinel_datetime(target_date: date) -> datetime:
     if target_date > datetime.now().date():
         raise ValueError("Only dates on the same day or in the past are supported.")
     return min(
-        datetime.now(timezone.utc)
-        .astimezone(tz=wc.LOCAL_TIMEZONE)
-        .replace(microsecond=0),
+        datetime.now(timezone.utc).replace(microsecond=0),
         datetime(
             target_date.year,
             target_date.month,
@@ -74,7 +72,7 @@ def sentinel_datetime(target_date: date) -> datetime:
             59,
             0,
             wc.LOCAL_TIMEZONE,
-        ).astimezone(tz=wc.LOCAL_TIMEZONE),
+        ).astimezone(tz=timezone.utc),
     )
 
 

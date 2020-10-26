@@ -36,16 +36,28 @@ def calc_log_time(offset_min: int = 0, time: Optional[str] = None) -> datetime:
     return my_date
 
 
-def extract_date_and_time(
-    df: pd.DataFrame, source_col: str = wc.COL_LOG_DATETIME
-) -> pd.DataFrame:
+def extract_date_and_time(df: pd.DataFrame) -> pd.DataFrame:
     """
     Extracts date and time information from a given pandas DataFrame.
     By default the source column is `log_dt`.
     """
-    date: pd.Series = df[source_col].apply(lambda x: x.date)
-    time: pd.Series = df[source_col].apply(lambda x: x.time)
-    return pd.DataFrame(dict(date=date, time=time),)
+    log_dt: pd.Series = df[wc.COL_LOG_DATETIME].apply(
+        lambda x: x.astimezone(timezone.utc)
+    )
+    commit_dt: pd.Series = df[wc.COL_COMMIT_DATETIME].apply(
+        lambda x: x.astimezone(timezone.utc)
+    )
+    date: pd.Series = df[wc.COL_LOG_DATETIME].apply(lambda x: x.date())
+    time: pd.Series = df[wc.COL_LOG_DATETIME].apply(lambda x: x.timetz())
+
+    return pd.DataFrame(
+        {
+            "date": date,
+            "time": time,
+            wc.COL_LOG_DATETIME_UTC: log_dt,
+            wc.COL_COMMIT_DATETIME_UTC: commit_dt,
+        }
+    )
 
 
 def now_localtz() -> datetime:
