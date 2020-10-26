@@ -214,6 +214,7 @@ class Log(object):
         self._check_nonempty_or_exit(fmt)
 
         df_day = self._filter_date_category_limit_cols(query_date)
+        self.logger.debug(f"Query date: {query_date}")
 
         if df_day.shape[0] == 0:
             if fmt is None:
@@ -349,9 +350,12 @@ class Log(object):
         except pd.errors.EmptyDataError:
             self._log_df = empty_df_from_schema(self._schema)
 
-        self._log_df = pd.concat(
-            [self._log_df, extract_date_and_time(self._log_df)], axis=1
-        )
+        self._log_df["date"] = None
+        self._log_df["time"] = None
+        self._log_df[wc.COL_LOG_DATETIME_UTC] = None
+        self._log_df[wc.COL_COMMIT_DATETIME_UTC] = None
+
+        self._log_df.update(extract_date_and_time(self._log_df))
 
     def _persist(self, df: pd.DataFrame, mode="a") -> None:
         cols = [col for col, _ in self._schema]
@@ -434,7 +438,7 @@ class Log(object):
         self,
         query_date: date,
         filter_category: str = wc.TOKEN_SESSION,
-        columns: List[str] = [wc.COL_LOG_DATETIME, wc.COL_TYPE],
+        columns: List[str] = [wc.COL_LOG_DATETIME_UTC, wc.COL_TYPE],
     ):
         """
         Filters the worklog DataFrame by query date and category.
@@ -458,7 +462,9 @@ class Log(object):
             # attach another row with the current time
             sentinel_df = pd.DataFrame(
                 {
-                    wc.COL_LOG_DATETIME: pd.to_datetime(sdt.isoformat()),
+                    wc.COL_LOG_DATETIME_UTC: pd.to_datetime(sdt.isoformat()).astimezone(
+                        timezone.utc
+                    ),
                     wc.COL_TYPE: wc.TOKEN_STOP,
                 },
                 index=[0],
@@ -468,11 +474,13 @@ class Log(object):
         return ret
 
     def _calc_facts(self, df: pd.DataFrame, hours_target: float, hours_max: float):
-        shifted_dt = df[wc.COL_LOG_DATETIME].shift(1)
+        shifted_dt = df[wc.COL_LOG_DATETIME_UTC].shift(1)
         stop_mask = df[wc.COL_TYPE] == wc.TOKEN_STOP
 
         # calculate total working time
-        total_time = (df[stop_mask][wc.COL_LOG_DATETIME] - shifted_dt[stop_mask]).sum()
+        total_time = (
+            df[stop_mask][wc.COL_LOG_DATETIME_UTC] - shifted_dt[stop_mask]
+        ).sum()
         total_time_str = format_timedelta(total_time)
 
         # calculate breaks
@@ -556,6 +564,10 @@ class Log(object):
             keep_cols=[wc.COL_LOG_DATETIME, wc.COL_TASK_IDENTIFIER, "time"],
         )
         df.rename(columns={"time": "agg_time"}, inplace=True)
+
+        if len(df) == 0:
+            return None
+
         return (
             df.set_index(wc.COL_LOG_DATETIME)
             .groupby(wc.COL_TASK_IDENTIFIER)
@@ -567,14 +579,17 @@ class Log(object):
         headline = f"Aggregated by {agg_label}:"
         print(headline)
         print("-" * len(headline))
-        print(
-            df.to_string(
-                index=False,
-                columns=cols,
-                header=col_titles,
-                formatters=formatters,
-                col_space=20,
+        if df is None or df.empty:
+            print("Aggregation not available")
+        else:
+            print(
+                df.to_string(
+                    index=False,
+                    columns=cols,
+                    header=col_titles,
+                    formatters=formatters,
+                    col_space=20,
+                )
             )
-        )
 
         print()
