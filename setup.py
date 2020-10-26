@@ -11,7 +11,7 @@ with open("requirements_develop.txt", "r") as fh:
 
 setuptools.setup(
     name="dcs-worklog",
-    version="0.0.33",
+    version="0.0.34",
     author="Fabian Mueller",
     author_email="repository@dotcs.me",
     description="Simple CLI tool to log work and projects",
@@ -22,9 +22,14 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     classifiers=[
-        "Programming Language :: Python :: 3",
+        # see: https://pypi.org/classifiers/
+        "Development Status :: 3 - Alpha",
+        "Environment :: Console",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "Natural Language :: English",
         "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Topic :: Office/Business",
     ],
     python_requires=">=3.6",
     install_requires=requirements,
