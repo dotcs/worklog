@@ -141,6 +141,8 @@ class Log(object):
     def report(self, date_from: datetime, date_to: datetime):
         """Generate a daily, weekly, monthly and task based report based on
         the content in the logfile."""
+        self._check_nonempty_or_exit(None)
+
         session_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_SESSION
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
         time_mask = (self._log_df[wc.COL_LOG_DATETIME] >= date_from) & (
