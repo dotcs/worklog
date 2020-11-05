@@ -300,7 +300,7 @@ class Log(object):
             )
             exit(1)
 
-        intervals = extract_intervals(task_df, logger=logger)
+        intervals = extract_intervals(task_df, logger=self.logger)
 
         intervals_detailed = intervals[["date", "start", "stop", "interval"]].rename(
             columns={
