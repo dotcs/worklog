@@ -108,9 +108,7 @@ class Log(object):
             count = task_counter[task]
             sys.stdout.write(f"{task} ({count})\n")
 
-    def log(
-        self, n: int, use_pager: bool, filter_category: Optional[List[str]]
-    ) -> None:
+    def log(self, n: int, use_pager: bool, filter_category: Optional[str]) -> None:
         """Display the content of the logfile."""
         if self._log_df.shape[0] == 0:
             sys.stdout.write("No data available\n")

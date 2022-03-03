@@ -2,6 +2,7 @@ from typing import List, Optional
 import logging
 import os
 from datetime import datetime, timezone, tzinfo
+import enum
 
 LOG_FORMAT: str = logging.BASIC_FORMAT
 LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -34,4 +35,9 @@ TOKEN_START = "start"
 TOKEN_STOP = "stop"
 TOKEN_SESSION = "session"
 TOKEN_TASK = "task"
+
+
+class Category(enum.Enum):
+    Session = "session"
+    Task = "task"
 
