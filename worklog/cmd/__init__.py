@@ -3,9 +3,6 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import re
 
-from worklog.cmd.doctor import app as doctor_app
-from worklog.cmd.log import app as log_app
-from worklog.cmd.report import app as report_app
 from worklog.cmd.session import app as session_app
 from worklog.cmd.status import app as status_app
 from worklog.cmd.task import app as task_app
