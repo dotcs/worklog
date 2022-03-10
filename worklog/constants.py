@@ -2,6 +2,7 @@ from typing import List, Optional
 import logging
 import os
 from datetime import datetime, timezone, tzinfo
+import enum
 
 LOG_FORMAT: str = logging.BASIC_FORMAT
 LOG_LEVELS: List[int] = [logging.ERROR, logging.WARN, logging.INFO, logging.DEBUG]
@@ -14,6 +15,9 @@ CONFIG_FILES: List[str] = [
 LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinfo
 
 DEFAULT_LOGGER_NAME = "worklog"
+"""Logger that can be configured in CLI mode with verbosity flags"""
+STD_LOGGER_NAME = "std_logger"
+"""Logger that writes always to stdout (in CLI mode)"""
 
 SUBCMD_SESSION = "session"
 SUBCMD_DOCTOR = "doctor"
@@ -34,4 +38,9 @@ TOKEN_START = "start"
 TOKEN_STOP = "stop"
 TOKEN_SESSION = "session"
 TOKEN_TASK = "task"
+
+
+class Category(enum.Enum):
+    Session = "session"
+    Task = "task"
 

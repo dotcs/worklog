@@ -46,7 +46,7 @@ def get_all_task_ids_with_duration(df: DataFrame):
     return s.to_dict()
 
 
-def get_active_task_ids(df: DataFrame):
+def get_active_task_ids(df: DataFrame) -> List[str]:
     """
     Returns a list of active tasks.
     Note: This method can only handle DataFrames that have entries where the
