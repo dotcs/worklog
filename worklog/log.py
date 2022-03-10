@@ -274,15 +274,18 @@ class Log(object):
         )
 
     def stop_active_tasks(self, log_dt: datetime) -> List[str]:
-        """Stop all active tasks by commiting changes to the logfile."""
+        """
+        Stop all active tasks by commiting changes to the logfile.
+        Returns the list of all stopped task ids.
+        """
         query_date = log_dt.date()
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
         date_mask = self._log_df["date"] == query_date
         mask = task_mask & date_mask
-        active_task_ids = get_active_task_ids(self._log_df[mask])
-        for task_id in active_task_ids:
+        tasks_to_stop = get_active_task_ids(self._log_df[mask])
+        for task_id in tasks_to_stop:
             self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
-        return active_task_ids
+        return tasks_to_stop
 
     def task_report(self, task_id):
         """Generate a report of a given task."""

@@ -31,10 +31,10 @@ def start(
         commit_dt = calc_log_time(offset_min, time)
         stopped_tasks = log.stop_active_tasks(commit_dt)
         fmt = stdout_log_entry_date_fmt(commit_dt)
-        for task_id in stopped_tasks:
+        for tid in stopped_tasks:
             typer.echo(
                 "Task {task_id} stopped at {date}".format(
-                    date=commit_dt.strftime(fmt), task_id=task_id
+                    date=commit_dt.strftime(fmt), task_id=tid
                 )
             )
 
