@@ -15,6 +15,9 @@ CONFIG_FILES: List[str] = [
 LOCAL_TIMEZONE: Optional[tzinfo] = datetime.now(timezone.utc).astimezone().tzinfo
 
 DEFAULT_LOGGER_NAME = "worklog"
+"""Logger that can be configured in CLI mode with verbosity flags"""
+STD_LOGGER_NAME = "std_logger"
+"""Logger that writes always to stdout (in CLI mode)"""
 
 SUBCMD_SESSION = "session"
 SUBCMD_DOCTOR = "doctor"

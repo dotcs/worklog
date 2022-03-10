@@ -86,9 +86,3 @@ time_opt: Optional[str] = typer.Option(
         "In the latter case the local timezone is used if the timezone part is left empty."
     ),
 )
-
-
-def stdout_log_entry_date_fmt(dt: datetime) -> str:
-    today = datetime.today().date()
-    fmt = "%H:%M:%S" if dt.date() == today else "%Y-%m-%d %H:%M:%S"
-    return fmt

@@ -2,6 +2,8 @@ import typer
 from typing import Optional
 from datetime import datetime, timezone, timedelta
 import re
+import logging
+import sys
 
 from worklog.cmd.session import app as session_app
 from worklog.cmd.status import app as status_app
@@ -59,6 +61,11 @@ def _calendar_week_parser(value: str) -> datetime:
 @app.callback()
 def callback():
     """Simple CLI tool to log work and projects."""
+
+    # Configure the standard logger to output to stdout
+    std_logger = logging.getLogger(wc.STD_LOGGER_NAME)
+    std_logger.setLevel(logging.INFO)
+    std_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 @app.command()

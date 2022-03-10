@@ -31,6 +31,8 @@ from worklog.utils.session import (
 )
 from worklog.errors import ErrMsg
 
+std_logger = logging.getLogger(wc.STD_LOGGER_NAME)
+
 
 class Log(object):
     # In-memory representation of log
@@ -74,11 +76,10 @@ class Log(object):
         time: Optional[str] = None,
         identifier: str = None,
         force: bool = False,
-    ) -> datetime:
+    ) -> None:
         """Commit a session/task change to the logfile."""
         log_date = calc_log_time(offset_min, time)
         self._commit(category, type_, log_date, identifier, force)
-        return log_date
 
     def doctor(self) -> None:
         """Test if the logfile is consistent."""
@@ -273,7 +274,7 @@ class Log(object):
             )
         )
 
-    def stop_active_tasks(self, log_dt: datetime) -> List[str]:
+    def stop_active_tasks(self, log_dt: datetime):
         """
         Stop all active tasks by commiting changes to the logfile.
         Returns the list of all stopped task ids.
@@ -285,7 +286,6 @@ class Log(object):
         tasks_to_stop = get_active_task_ids(self._log_df[mask])
         for task_id in tasks_to_stop:
             self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
-        return tasks_to_stop
 
     def task_report(self, task_id):
         """Generate a report of a given task."""
@@ -420,6 +420,15 @@ class Log(object):
         self._log_df = pd.concat((self._log_df, record_t))
         # and persist to disk
         self._persist(record_t, mode="a")
+
+        today = datetime.today().date()
+        fmt = "%H:%M:%S" if log_dt.date() == today else "%Y-%m-%d %H:%M:%S"
+        start_stop = "started" if type_ == wc.TOKEN_START else "stopped"
+        category_and_id = (
+            "Session" if category == wc.TOKEN_SESSION else "Task " + (identifier or "")
+        )
+        msg = "{} {} at {}".format(category_and_id, start_stop, log_dt.strftime(fmt),)
+        std_logger.info(msg)
 
         # Because we allow for time offsets sorting is not guaranteed at this point.
         # Update sorting of values in-memory.
