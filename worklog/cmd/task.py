@@ -6,6 +6,7 @@ from worklog.cmd.utils import (
     offset_minutes_opt,
     time_opt,
     configure_worklog,
+    stdout_log_entry_date_fmt,
 )
 from worklog.utils.time import calc_log_time
 import worklog.constants as wc
@@ -28,14 +29,27 @@ def start(
 
     if auto_stop:
         commit_dt = calc_log_time(offset_min, time)
-        log.stop_active_tasks(commit_dt)
+        stopped_tasks = log.stop_active_tasks(commit_dt)
+        fmt = stdout_log_entry_date_fmt(commit_dt)
+        for task_id in stopped_tasks:
+            typer.echo(
+                "Task {task_id} stopped at {date}".format(
+                    date=commit_dt.strftime(fmt), task_id=task_id
+                )
+            )
 
-    log.commit(
+    dt = log.commit(
         wc.TOKEN_TASK,
         wc.TOKEN_START,
         offset_min=offset_min,
         time=time,
         identifier=task_id,
+    )
+    fmt = stdout_log_entry_date_fmt(dt)
+    typer.echo(
+        "Task {task_id} started at {date}".format(
+            date=dt.strftime(fmt), task_id=task_id
+        )
     )
 
 
@@ -49,12 +63,18 @@ def stop(
 
     offset_min = 0 if offset_minutes is None else offset_minutes
 
-    log.commit(
+    dt = log.commit(
         wc.TOKEN_TASK,
         wc.TOKEN_STOP,
         offset_min=offset_min,
         time=time,
         identifier=task_id,
+    )
+    fmt = stdout_log_entry_date_fmt(dt)
+    typer.echo(
+        "Task {task_id} stopped at {date}".format(
+            date=dt.strftime(fmt), task_id=task_id
+        )
     )
 
 

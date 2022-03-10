@@ -74,10 +74,11 @@ class Log(object):
         time: Optional[str] = None,
         identifier: str = None,
         force: bool = False,
-    ) -> None:
+    ) -> datetime:
         """Commit a session/task change to the logfile."""
         log_date = calc_log_time(offset_min, time)
         self._commit(category, type_, log_date, identifier, force)
+        return log_date
 
     def doctor(self) -> None:
         """Test if the logfile is consistent."""
@@ -272,7 +273,7 @@ class Log(object):
             )
         )
 
-    def stop_active_tasks(self, log_dt: datetime):
+    def stop_active_tasks(self, log_dt: datetime) -> List[str]:
         """Stop all active tasks by commiting changes to the logfile."""
         query_date = log_dt.date()
         task_mask = self._log_df[wc.COL_CATEGORY] == wc.TOKEN_TASK
@@ -281,6 +282,7 @@ class Log(object):
         active_task_ids = get_active_task_ids(self._log_df[mask])
         for task_id in active_task_ids:
             self._commit(wc.TOKEN_TASK, wc.TOKEN_STOP, log_dt, identifier=task_id)
+        return active_task_ids
 
     def task_report(self, task_id):
         """Generate a report of a given task."""
